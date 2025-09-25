@@ -1,6 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
 import { Paper, Typography, Box, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import Chart from 'react-apexcharts';
 
 const DonutChart = observer(() => {
   const handleMetricChange = (
@@ -10,6 +11,36 @@ const DonutChart = observer(() => {
     if (newMetric !== null) {
       swimStore.setStrokeDistributionMetric(newMetric);
     }
+  };
+
+  const chartData = swimStore.strokeDistribution;
+  const series = chartData.map(d => d.value);
+  const labels = chartData.map(d => d.name);
+
+  const options = {
+    chart: {
+      type: 'donut' as const,
+      background: 'transparent',
+    },
+    labels,
+    theme: {
+      mode: 'dark' as const,
+      palette: 'palette1' as const,
+    },
+    legend: {
+      position: 'bottom' as const,
+    },
+    responsive: [{
+      breakpoint: 480,
+      options: {
+        chart: {
+          width: 200
+        },
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }]
   };
 
   return (
@@ -38,13 +69,14 @@ const DonutChart = observer(() => {
             Distance
           </ToggleButton>
         </ToggleButtonGroup>
-        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '100%', height: '100%' }}>
-              {/* Placeholder for the chart - actual implementation depends on MUI charts installation */}
+        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+            {series.length > 0 ? (
+              <Chart options={options} series={series} type="donut" width="100%" />
+            ) : (
               <Typography variant="body2" align="center">
-                Chart would be displayed here
+                No data to display for the selected filters.
               </Typography>
-            </div>
+            )}
         </Box>
     </Paper>
   );
