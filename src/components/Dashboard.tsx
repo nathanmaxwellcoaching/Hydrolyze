@@ -7,6 +7,7 @@ import SummaryCard from './SummaryCard';
 import DonutChart from './DonutChart';
 import ActionPanel from './ActionPanel';
 import SwimRecordsTable from './SwimRecordsTable';
+import VelocityDistanceChart from './VelocityDistanceChart';
 
 const Dashboard = observer(() => {
   return (
@@ -41,6 +42,12 @@ const Dashboard = observer(() => {
           {swimStore.showDonutChart && <DonutChart />}
         </Grid>
       </Grid>
+
+      {swimStore.showVelocityDistanceChart && (
+        <Grid item xs={12} sx={{ mb: 3 }}>
+          <VelocityDistanceChart />
+        </Grid>
+      )}
 
       {swimStore.showTrendlineDetails && <TrendlineStats />}
 

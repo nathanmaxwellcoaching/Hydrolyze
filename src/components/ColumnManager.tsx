@@ -56,6 +56,16 @@ const ColumnManager = ({ anchorEl, onClose }: ColumnManagerProps) => {
           }
           label="Swim Stroke Distribution"
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={swimStore.showVelocityDistanceChart}
+              onChange={(e) => swimStore.toggleVelocityDistanceChart(e.target.checked)}
+              sx={{ color: '#B0B0B0' }}
+            />
+          }
+          label="Velocity vs Distance"
+        />
       </FormGroup>
     </Popover>
   );

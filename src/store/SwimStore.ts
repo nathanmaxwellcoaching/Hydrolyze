@@ -59,10 +59,12 @@ class SwimStore {
   showTrendlineDetails = false;
   showSwimTimesChart = true;
   showDonutChart = false;
+  showVelocityDistanceChart = false;
+  velocityChartYAxis: 'v_swim' | 'stroke_index' | 'ie_ratio' = 'v_swim';
   strokeDistributionMetric: 'records' | 'distance' = 'records';
 
   constructor() {
-    makeAutoObservable(this, { filteredSwims: computed, personalBests: computed, allFiltersSet: computed, achievementRates: computed, averageAndSd: computed });
+    makeAutoObservable(this, { filteredSwims: computed, personalBests: computed, allFiltersSet: computed, achievementRates: computed, averageAndSd: computed, velocityDistanceData: computed });
     this.loadSwims();
   }
 
@@ -171,8 +173,55 @@ class SwimStore {
     this.showDonutChart = show;
   }
 
+  toggleVelocityDistanceChart(show: boolean) {
+    this.showVelocityDistanceChart = show;
+  }
+
+  setVelocityChartYAxis(metric: 'v_swim' | 'stroke_index' | 'ie_ratio') {
+    this.velocityChartYAxis = metric;
+  }
+
   setStrokeDistributionMetric(metric: 'records' | 'distance') {
     this.strokeDistributionMetric = metric;
+  }
+
+  get velocityDistanceData() {
+    const groupedByDistance = this.filteredSwims.reduce((acc, swim) => {
+      if (!acc[swim.distance]) {
+        acc[swim.distance] = [];
+      }
+      acc[swim.distance].push(swim);
+      return acc;
+    }, {} as Record<number, Swim[]>);
+
+    const data = Object.entries(groupedByDistance).map(([distance, swims]) => {
+      const d = Number(distance);
+      const avgDuration = swims.reduce((acc, s) => acc + s.duration, 0) / swims.length;
+      const avgStrokeRate = swims.reduce((acc, s) => acc + (s.averageStrokeRate || 0), 0) / swims.length;
+      const avgHeartRate = swims.reduce((acc, s) => acc + (s.heartRate || 0), 0) / swims.length;
+
+      const vSwim = d / avgDuration;
+
+      let yValue;
+      switch (this.velocityChartYAxis) {
+        case 'v_swim':
+          yValue = vSwim;
+          break;
+        case 'stroke_index':
+          yValue = avgStrokeRate > 0 ? vSwim / (avgStrokeRate / 60) : 0;
+          break;
+        case 'ie_ratio':
+          const si = avgStrokeRate > 0 ? vSwim / (avgStrokeRate / 60) : 0;
+          yValue = si > 0 ? avgHeartRate / si : 0;
+          break;
+        default:
+          yValue = 0;
+      }
+
+      return { x: `${d}m`, y: parseFloat(yValue.toFixed(2)) };
+    });
+
+    return data;
   }
 
   get filteredSwims() {
