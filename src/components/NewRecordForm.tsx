@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
@@ -30,6 +30,18 @@ const NewRecordForm = observer(() => {
         heartRate: undefined,
     });
     const [strokeRateInput, setStrokeRateInput] = useState<string>('');
+
+    const is_admin = swimStore.currentUser?.isAdmin;
+
+    useEffect(() => {
+        if (swimStore.currentUser && !is_admin) {
+            const currentUserName = swimStore.currentUser.name;
+            setFormState(prev => ({
+                ...prev,
+                swimmer: currentUserName
+            }));
+        }
+    }, [swimStore.currentUser, is_admin]);
 
     const handleChange = (e: any) => {
         const { name, value } = e.target;
@@ -79,6 +91,8 @@ const NewRecordForm = observer(() => {
                         name="swimmer"
                         value={formState.swimmer}
                         onChange={handleChange}
+                        disabled={!is_admin}
+                        InputLabelProps={{ shrink: !!formState.swimmer }}
                     />
                     <TextField
                         fullWidth

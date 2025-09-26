@@ -5,6 +5,7 @@ import swimStore from '../store/SwimStore';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import StorageIcon from '@mui/icons-material/Storage';
 
 const drawerWidth = 240;
 
@@ -18,6 +19,10 @@ const Sidebar = () => {
     { text: 'Log Swim', path: '/log', icon: <AddCircleOutlineIcon /> },
     { text: 'Lap Metrics', path: '/lap-metrics', icon: <AssessmentIcon /> },
   ];
+
+  if (swimStore.currentUser && swimStore.currentUser.isAdmin) {
+    navItems.push({ text: 'Manage Records', path: '/manage-records', icon: <StorageIcon /> });
+  }
 
   return (
     <Drawer
@@ -36,8 +41,8 @@ const Sidebar = () => {
     >
       <Toolbar sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', p: 2, borderBottom: '1px solid #333' }}>
         <Avatar sx={{ width: 64, height: 64, mb: 1, border: '2px solid #444' }} />
-        <Typography variant="h6">Nathan Maxwell</Typography>
-        <Typography variant="body2" sx={{ color: '#B0B0B0' }}>nathanmaxwell@example.com</Typography>
+        <Typography variant="h6">{swimStore.currentUser?.name}</Typography>
+        <Typography variant="body2" sx={{ color: '#B0B0B0' }}>{swimStore.currentUser?.email}</Typography>
       </Toolbar>
       <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: 'calc(100% - 160px)' }}>
         <List>

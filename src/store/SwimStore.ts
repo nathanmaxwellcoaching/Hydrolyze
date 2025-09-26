@@ -1,6 +1,15 @@
 import { makeAutoObservable, runInAction, computed } from "mobx";
 import { db } from "../firebase-config";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from "firebase/firestore";
+import bcrypt from 'bcryptjs';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  isAdmin: boolean;
+}
 
 export interface TrendlineStat {
   name: string;
@@ -51,7 +60,7 @@ interface Filters {
 
 class SwimStore {
   swims: Swim[] = [];
-  isAuthenticated = false;
+  currentUser: User | null = null;
   activeFilters: Filters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null };
   visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !['id', 'date', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col));
   trendlineStats: TrendlineStat[] = [];
@@ -64,11 +73,35 @@ class SwimStore {
   strokeDistributionMetric: 'records' | 'distance' = 'records';
 
   constructor() {
-    makeAutoObservable(this, { filteredSwims: computed, personalBests: computed, allFiltersSet: computed, achievementRates: computed, averageAndSd: computed, velocityDistanceData: computed });
+    makeAutoObservable(this, { 
+      userSwims: computed,
+      filteredSwims: computed, 
+      personalBests: computed, 
+      allFiltersSet: computed, 
+      achievementRates: computed, 
+      averageAndSd: computed, 
+      velocityDistanceData: computed,
+      isAuthenticated: computed,
+      currentUser: true,
+    });
     this.loadSwims();
   }
 
   async loadSwims() {
+    // Seed users if none exist
+    const usersCollection = collection(db, "users");
+    const userSnapshot = await getDocs(usersCollection);
+    if (userSnapshot.empty) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash('password', salt);
+      await addDoc(usersCollection, { 
+        name: 'Admin User', 
+        email: 'admin@swintracker.com', 
+        passwordHash, 
+        isAdmin: true 
+      });
+    }
+
     const swimsCollection = collection(db, "swims");
     const swimSnapshot = await getDocs(swimsCollection);
     if (swimSnapshot.empty) {
@@ -101,42 +134,49 @@ class SwimStore {
     }
   }
 
-  async addSwim(swim: Omit<Swim, 'id'>) {
-    const newSwimRef = await addDoc(collection(db, "swims"), swim);
-    const newSwim = { ...swim, id: newSwimRef.id };
-    runInAction(() => {
-      this.swims.unshift(newSwim);
-    });
-  }
-
-  async updateSwim(updatedSwim: Swim) {
-    const swimRef = doc(db, "swims", updatedSwim.id);
-    await updateDoc(swimRef, { ...updatedSwim });
-    runInAction(() => {
-      const index = this.swims.findIndex(s => s.id === updatedSwim.id);
-      if (index !== -1) {
-        this.swims[index] = updatedSwim;
-      }
-    });
-  }
-
-  async deleteSwim(id: string) {
-    await deleteDoc(doc(db, "swims", id));
-    runInAction(() => {
-      this.swims = this.swims.filter(s => s.id !== id);
-    });
-  }
-
-  authenticate(password: string): boolean {
-    const isCorrect = password === import.meta.env.VITE_APP_PASSWORD;
-    if (isCorrect) {
-      runInAction(() => { this.isAuthenticated = true; });
+  async register(name: string, email: string, password: string) {
+    const usersCollection = collection(db, "users");
+    const q = query(usersCollection, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      throw new Error("User with this email already exists.");
     }
-    return isCorrect;
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    await addDoc(usersCollection, { name, email, passwordHash, isAdmin: false });
+  }
+
+  async login(email: string, password: string): Promise<boolean> {
+    const usersCollection = collection(db, "users");
+    const q = query(usersCollection, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return false;
+    }
+
+    const userDoc = querySnapshot.docs[0];
+    const user = { ...userDoc.data(), id: userDoc.id } as User;
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+    if (isMatch) {
+      runInAction(() => {
+        this.currentUser = user;
+      });
+    }
+
+    return isMatch;
   }
 
   logout() {
-    this.isAuthenticated = false;
+    this.currentUser = null;
+  }
+
+  get isAuthenticated() {
+    return this.currentUser !== null;
   }
 
   applyFilters(filters: Partial<Filters>) {
@@ -185,6 +225,14 @@ class SwimStore {
     this.strokeDistributionMetric = metric;
   }
 
+  get userSwims() {
+    if (this.currentUser && !this.currentUser.isAdmin) {
+      const currentUserName = this.currentUser.name;
+      return this.swims.filter(swim => swim.swimmer === currentUserName);
+    }
+    return this.swims;
+  }
+
   get velocityDistanceData() {
     const groupedByDistance = this.filteredSwims.reduce((acc, swim) => {
       if (!acc[swim.distance]) {
@@ -225,7 +273,7 @@ class SwimStore {
   }
 
   get filteredSwims() {
-    return this.swims.filter(swim => {
+    return this.userSwims.filter(swim => {
       const { swimmer, stroke, distance, gear, poolLength, startDate, endDate } = this.activeFilters;
       if (swimmer && swim.swimmer !== swimmer) return false;
       if (stroke && swim.stroke !== stroke) return false;
@@ -249,7 +297,7 @@ class SwimStore {
   }
 
   get strokeDistribution() {
-    const swims = this.swims.filter(swim => {
+    const swims = this.userSwims.filter(swim => {
       const { swimmer, startDate, endDate } = this.activeFilters;
       if (swimmer && swim.swimmer !== swimmer) return false;
       if (startDate && new Date(swim.date) < new Date(startDate)) return false;
@@ -275,15 +323,18 @@ class SwimStore {
   }
 
   get uniqueSwimmers() {
+    if (this.currentUser && !this.currentUser.isAdmin) {
+      return this.currentUser.name ? [this.currentUser.name] : [];
+    }
     return [...new Set(this.swims.map(s => s.swimmer))];
   }
 
   get uniqueStrokes() {
-    return [...new Set(this.swims.map(s => s.stroke))];
+    return [...new Set(this.userSwims.map(s => s.stroke))];
   }
 
   get uniqueDistances() {
-    return [...new Set(this.swims.map(s => s.distance))].sort((a, b) => a - b);
+    return [...new Set(this.userSwims.map(s => s.distance))].sort((a, b) => a - b);
   }
 
   get uniqueGear() {
@@ -291,7 +342,7 @@ class SwimStore {
   }
 
   get uniquePoolLengths() {
-    return [...new Set(this.swims.map(s => s.poolLength))].sort((a, b) => a - b);
+    return [...new Set(this.userSwims.map(s => s.poolLength))].sort((a, b) => a - b);
   }
 
   get averagePace() {
@@ -386,6 +437,24 @@ class SwimStore {
       return parseFloat((swim.heartRate / swimIndex).toFixed(2));
     }
     return null;
+  }
+
+  async addSwim(swim: Omit<Swim, 'id'>) {
+    const swimsCollection = collection(db, "swims");
+    await addDoc(swimsCollection, swim);
+    this.loadSwims();
+  }
+
+  async updateSwim(id: string, updatedData: Partial<Swim>) {
+    const swimRef = doc(db, "swims", id);
+    await updateDoc(swimRef, updatedData);
+    this.loadSwims();
+  }
+
+  async deleteSwim(id: string) {
+    const swimRef = doc(db, "swims", id);
+    await deleteDoc(swimRef);
+    this.loadSwims();
   }
 }
 

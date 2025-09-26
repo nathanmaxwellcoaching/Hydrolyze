@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { IconButton, Menu, MenuItem, Checkbox, ListItemText } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
+import { Popover, MenuItem, Checkbox, ListItemText, FormGroup } from '@mui/material';
 import type { Swim } from '../store/SwimStore';
 
 const columnDisplayNames: { [key: string]: string } = {
@@ -23,20 +22,21 @@ const columnDisplayNames: { [key: string]: string } = {
 };
 
 const allColumns = Object.keys(columnDisplayNames) as (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[];
+const mandatoryColumns = ['date', 'swimmer', 'duration'];
 
-const ColumnSelector = observer(() => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+interface ColumnSelectorProps {
+  anchorEl: HTMLElement | null;
+  onClose: () => void;
+}
+
+const ColumnSelector = observer(({ anchorEl, onClose }: ColumnSelectorProps) => {
   const open = Boolean(anchorEl);
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleToggle = (value: keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio') => () => {
+    if (mandatoryColumns.includes(value)) {
+      return; // Do not allow toggling mandatory columns
+    }
+
     const currentIndex = swimStore.visibleColumns.indexOf(value);
     const newChecked = [...swimStore.visibleColumns];
 
@@ -50,37 +50,38 @@ const ColumnSelector = observer(() => {
   };
 
   return (
-    <div>
-      <IconButton
-        aria-label="settings"
-        aria-controls="column-menu"
-        aria-haspopup="true"
-        onClick={handleClick}
-      >
-        <SettingsIcon />
-      </IconButton>
-      <Menu
-        id="column-menu"
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        MenuListProps={{
-          'aria-labelledby': 'basic-button',
-        }}
-      >
-        {allColumns.map((key) => (
-          <MenuItem key={key} onClick={handleToggle(key)}>
-            <Checkbox
-              edge="start"
-              checked={swimStore.visibleColumns.indexOf(key) > -1}
-              tabIndex={-1}
-              disableRipple
-            />
-            <ListItemText primary={columnDisplayNames[key]} />
-          </MenuItem>
-        ))}
-      </Menu>
-    </div>
+    <Popover
+      open={open}
+      anchorEl={anchorEl}
+      onClose={onClose}
+      anchorOrigin={{
+        vertical: 'bottom',
+        horizontal: 'right',
+      }}
+      transformOrigin={{
+        vertical: 'top',
+        horizontal: 'right',
+      }}
+    >
+      <FormGroup sx={{ p: 2, backgroundColor: '#2C2C2C', color: '#FFFFFF' }}>
+        {allColumns.map((key) => {
+          const isMandatory = mandatoryColumns.includes(key);
+          return (
+            <MenuItem key={key} onClick={handleToggle(key)} disabled={isMandatory}>
+              <Checkbox
+                edge="start"
+                checked={swimStore.visibleColumns.indexOf(key) > -1 || isMandatory}
+                tabIndex={-1}
+                disableRipple
+                disabled={isMandatory}
+                sx={{ color: isMandatory ? '#888' : '#B0B0B0' }}
+              />
+              <ListItemText primary={columnDisplayNames[key]} />
+            </MenuItem>
+          );
+        })}
+      </FormGroup>
+    </Popover>
   );
 });
 

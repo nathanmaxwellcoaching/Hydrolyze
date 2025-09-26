@@ -4,7 +4,7 @@ import swimStore from '../store/SwimStore';
 
 const ProtectedRoute = observer(() => {
   if (!swimStore.isAuthenticated) {
-    return <Navigate to="/password" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;

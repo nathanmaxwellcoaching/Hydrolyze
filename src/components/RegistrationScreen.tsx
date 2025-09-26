@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
 import { Box, Card, Typography, TextField, Button, keyframes } from '@mui/material';
-import PoolIcon from '@mui/icons-material/Pool'; // Using an MUI icon as a logo
+import PoolIcon from '@mui/icons-material/Pool';
 
 const glow = keyframes`
   0% { box-shadow: 0 0 5px #9C27B0; }
@@ -12,17 +11,21 @@ const glow = keyframes`
   100% { box-shadow: 0 0 5px #9C27B0; }
 `;
 
-const PasswordScreen = observer(() => {
+const RegistrationScreen = observer(() => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (swimStore.authenticate(password)) {
-      navigate('/', { replace: true });
-    } else {
-      setError(true);
+    setError('');
+    try {
+      await swimStore.register(name, email, password);
+      navigate('/login');
+    } catch (err) {
+      setError('An error occurred during registration.');
     }
   };
 
@@ -47,29 +50,45 @@ const PasswordScreen = observer(() => {
       >
         <PoolIcon sx={{ fontSize: 60, color: 'primary.main' }} />
         <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 2 }}>
-          SwimTracker
+          Register
         </Typography>
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+          <TextField
+            fullWidth
+            label="Name"
+            variant="outlined"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            type="email"
+            label="Email"
+            variant="outlined"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            sx={{ mb: 2 }}
+          />
           <TextField
             fullWidth
             type="password"
             label="Password"
             variant="outlined"
             value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setError(false);
-            }}
-            error={error}
-            helperText={error ? 'Incorrect password' : ''}
+            onChange={(e) => setPassword(e.target.value)}
           />
+          {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, p: 1.5 }}>
-            Enter
+            Register
           </Button>
+          <Typography sx={{ mt: 2 }}>
+            Already have an account? <Link to="/login">Login</Link>
+          </Typography>
         </Box>
       </Card>
     </Box>
   );
 });
 
-export default PasswordScreen;
+export default RegistrationScreen;
