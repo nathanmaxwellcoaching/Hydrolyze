@@ -1,16 +1,19 @@
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { Box, Typography, TextField, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, TextField, IconButton, Tooltip, useMediaQuery, useTheme } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useState } from 'react';
 import FilterCard from './FilterCard';
 import ColumnManager from './ColumnManager';
 
-const Header = observer(() => {
+const Header = observer(({ handleDrawerToggle }: { handleDrawerToggle: () => void }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleColumnManagerClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -23,9 +26,22 @@ const Header = observer(() => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2, py: 1, backgroundColor: '#1A1A1A', borderRadius: '8px' }}>
-        <Box>
-          <Typography variant="h5" sx={{ color: '#FFFFFF' }}>Dashboard</Typography>
-          <Typography variant="subtitle2" sx={{ color: '#B0B0B0' }}>Overview of your swimming performance.</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isMobile && (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ color: '#FFFFFF' }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+          <Box>
+            <Typography variant="h5" sx={{ color: '#FFFFFF' }}>Dashboard</Typography>
+            <Typography variant="subtitle2" sx={{ color: '#B0B0B0' }}>Overview of your swimming performance.</Typography>
+          </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <TextField
