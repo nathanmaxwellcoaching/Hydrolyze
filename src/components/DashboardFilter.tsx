@@ -48,6 +48,7 @@ const DashboardFilter = observer(() => {
                     <PillFormControl fullWidth size="small">
                         <InputLabel>Swimmer</InputLabel>
                         <Select value={filters.swimmer} label="Swimmer" onChange={e => setFilters({...filters, swimmer: e.target.value})}>
+                            <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniqueSwimmers.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                         </Select>
                     </PillFormControl>
@@ -60,6 +61,7 @@ const DashboardFilter = observer(() => {
                     <PillFormControl fullWidth size="small">
                         <InputLabel>Stroke</InputLabel>
                         <Select value={filters.stroke} label="Stroke" onChange={e => setFilters({...filters, stroke: e.target.value})}>
+                            <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniqueStrokes.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                         </Select>
                     </PillFormControl>
@@ -72,6 +74,7 @@ const DashboardFilter = observer(() => {
                     <PillFormControl fullWidth size="small">
                         <InputLabel>Distance</InputLabel>
                         <Select value={filters.distance} label="Distance" onChange={e => setFilters({...filters, distance: e.target.value})}>
+                            <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniqueDistances.map(d => <MenuItem key={d} value={d}>{`${d}m`}</MenuItem>)}
                         </Select>
                     </PillFormControl>

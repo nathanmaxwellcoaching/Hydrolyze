@@ -69,7 +69,7 @@ class SwimStore {
   showSwimTimesChart = true;
   showDonutChart = false;
   showVelocityDistanceChart = false;
-  velocityChartYAxis: 'v_swim' | 'stroke_index' | 'ie_ratio' = 'v_swim';
+  velocityChartYAxis: 'v_swim' | 'stroke_index' | 'ie_ratio' | 'stroke_length' = 'v_swim';
   strokeDistributionMetric: 'records' | 'distance' = 'records';
 
   constructor() {
@@ -217,7 +217,7 @@ class SwimStore {
     this.showVelocityDistanceChart = show;
   }
 
-  setVelocityChartYAxis(metric: 'v_swim' | 'stroke_index' | 'ie_ratio') {
+  setVelocityChartYAxis(metric: 'v_swim' | 'stroke_index' | 'ie_ratio' | 'stroke_length') {
     this.velocityChartYAxis = metric;
   }
 
@@ -244,29 +244,30 @@ class SwimStore {
 
     const data = Object.entries(groupedByDistance).map(([distance, swims]) => {
       const d = Number(distance);
-      const avgDuration = swims.reduce((acc, s) => acc + s.duration, 0) / swims.length;
-      const avgStrokeRate = swims.reduce((acc, s) => acc + (s.averageStrokeRate || 0), 0) / swims.length;
-      const avgHeartRate = swims.reduce((acc, s) => acc + (s.heartRate || 0), 0) / swims.length;
 
-      const vSwim = d / avgDuration;
+      const yValues = swims.map(swim => {
+        const vSwim = swim.distance / swim.duration;
+        const strokeLength = swim.averageStrokeRate ? vSwim / (swim.averageStrokeRate / 60) : 0;
+        const strokeIndex = strokeLength * vSwim;
+        const ieRatio = strokeIndex > 0 && swim.heartRate ? swim.heartRate / strokeIndex : 0;
 
-      let yValue;
-      switch (this.velocityChartYAxis) {
-        case 'v_swim':
-          yValue = vSwim;
-          break;
-        case 'stroke_index':
-          yValue = avgStrokeRate > 0 ? vSwim / (avgStrokeRate / 60) : 0;
-          break;
-        case 'ie_ratio':
-          const si = avgStrokeRate > 0 ? vSwim / (avgStrokeRate / 60) : 0;
-          yValue = si > 0 ? avgHeartRate / si : 0;
-          break;
-        default:
-          yValue = 0;
-      }
+        switch (this.velocityChartYAxis) {
+          case 'v_swim':
+            return vSwim;
+          case 'stroke_length':
+            return strokeLength;
+          case 'stroke_index':
+            return strokeIndex;
+          case 'ie_ratio':
+            return ieRatio;
+          default:
+            return 0;
+        }
+      });
 
-      return { x: `${d}m`, y: parseFloat(yValue.toFixed(2)) };
+      const avgYValue = yValues.reduce((acc, val) => acc + val, 0) / yValues.length;
+
+      return { x: `${d}m`, y: parseFloat(avgYValue.toFixed(2)) };
     });
 
     return data;
