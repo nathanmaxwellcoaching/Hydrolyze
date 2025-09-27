@@ -55,9 +55,9 @@ const SwimRecordsTable = observer(() => {
 
   return (
     <Paper sx={{ p: 2, backgroundColor: '#1A1A1A', color: '#FFFFFF' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>Recent Swims</Typography>
-        <FormControl sx={{ m: 1, minWidth: 120 }} size="small">
+<FormControl sx={{ m: 1, minWidth: 120, marginLeft: 'auto' }} size="small">
           <InputLabel id="sort-select-label" sx={{ color: '#FFFFFF' }}>Sort By</InputLabel>
           <Select
             labelId="sort-select-label"
