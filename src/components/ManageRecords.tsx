@@ -5,6 +5,7 @@ import type { Swim } from '../store/SwimStore';
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Button, TextField, IconButton } from '@mui/material';
 import ColumnSelector from './ColumnSelector';
 import SettingsIcon from '@mui/icons-material/Settings';
+import DashboardFilter from './DashboardFilter';
 
 const columnDisplayNames: { [key: string]: string } = {
   id: 'ID',
@@ -21,6 +22,21 @@ const columnDisplayNames: { [key: string]: string } = {
   strokeLength: 'Stroke Length (SL)',
   swimIndex: 'Swim Index (SI)',
   ieRatio: 'IE Ratio',
+};
+
+const getColumnValue = (record: Swim, column: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')) => {
+  switch (column) {
+    case 'strokeLength':
+      return swimStore.calculateStrokeLength(record);
+    case 'swimIndex':
+      return swimStore.calculateSwimIndex(record);
+    case 'ieRatio':
+      return swimStore.calculateIERatio(record);
+    case 'gear':
+      return Array.isArray(record.gear) ? record.gear.join(', ') : record.gear;
+    default:
+      return record[column as keyof Swim];
+  }
 };
 
 const ManageRecords = observer(() => {
@@ -77,10 +93,11 @@ const ManageRecords = observer(() => {
     }));
   };
 
-  const isEditable = (key: keyof Swim) => !['id'].includes(key);
+  const isEditable = (key: any) => !['id', 'strokeLength', 'swimIndex', 'ieRatio'].includes(key);
 
   return (
     <Paper sx={{ p: 2, backgroundColor: '#1A1A1A', color: '#FFFFFF' }}>
+      <DashboardFilter />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>Manage Swim Records</Typography>
         <IconButton onClick={handleColumnSelectorClick} color="inherit">
@@ -101,11 +118,11 @@ const ManageRecords = observer(() => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {swimStore.swims.map((record) => (
+            {swimStore.filteredSwims.map((record) => (
               <TableRow key={record.id}>
                 {swimStore.visibleColumns.map((column) => (
                   <TableCell key={column} sx={{ color: '#B0B0B0' }}>
-                    {editState[record.id] && isEditable(column as keyof Swim) ? (
+                    {editState[record.id] && isEditable(column) ? (
                       <TextField
                         value={editState[record.id]?.[column as keyof Swim] ?? ''}
                         onChange={(e) => handleEditChange(record.id, column as keyof Swim, e.target.value)}
@@ -116,7 +133,7 @@ const ManageRecords = observer(() => {
                         variant="standard"
                       />
                     ) : (
-                      column === 'gear' && Array.isArray(record.gear) ? record.gear.join(', ') : String(record[column as keyof typeof record])
+                      String(getColumnValue(record, column) ?? '')
                     )}
                   </TableCell>
                 ))}

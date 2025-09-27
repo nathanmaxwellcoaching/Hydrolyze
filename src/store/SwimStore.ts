@@ -62,7 +62,7 @@ class SwimStore {
   swims: Swim[] = [];
   currentUser: User | null = null;
   activeFilters: Filters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null };
-  visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !['id', 'date', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col));
+  visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !['id', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col));
   trendlineStats: TrendlineStat[] = [];
   showTrendline = false;
   showTrendlineDetails = false;
