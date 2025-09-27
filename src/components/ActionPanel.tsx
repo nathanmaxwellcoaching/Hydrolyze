@@ -1,4 +1,5 @@
 import { Paper, Typography, Button, Box } from '@mui/material';
+import { Link } from 'react-router-dom';
 
 const ActionPanel = () => (
     <Paper sx={{ 
@@ -15,7 +16,9 @@ const ActionPanel = () => (
         <Typography variant="h6" gutterBottom>Ready for your next swim?</Typography>
         <Typography sx={{ color: '#B0B0B0', mb: 2 }}>Log a new session or review your progress.</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button variant="contained" color="primary">Log a Swim</Button>
+            <Link to="/log">
+                <Button variant="contained" color="primary">Log a Swim</Button>
+            </Link>
         </Box>
     </Paper>
 )
