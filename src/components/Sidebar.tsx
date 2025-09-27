@@ -7,21 +7,36 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import StorageIcon from '@mui/icons-material/Storage';
 
+import StarIcon from '@mui/icons-material/Star';
+
 const drawerWidth = 240;
+
+interface NavItem {
+  text: string;
+  path: string;
+  icon: React.ReactElement;
+}
+
+const navItems: NavItem[] = [
+  { text: 'Dashboard', path: '/', icon: <DashboardIcon /> },
+  { text: 'Log Swim', path: 'log', icon: <AddCircleOutlineIcon /> },
+  { text: 'Lap Metrics', path: 'lap-metrics', icon: <AssessmentIcon /> },
+  { text: 'Goal Times', path: 'goal-times', icon: <StarIcon /> },
+];
 
 const Sidebar = () => {
   const handleLogout = () => {
     swimStore.logout();
   };
 
-  const navItems = [
-    { text: 'Dashboard', path: '/', icon: <DashboardIcon /> },
-    { text: 'Log Swim', path: '/log', icon: <AddCircleOutlineIcon /> },
-    { text: 'Lap Metrics', path: '/lap-metrics', icon: <AssessmentIcon /> },
+  const adminNavItems: NavItem[] = [
+    { text: 'Manage Records', path: 'manage-records', icon: <StorageIcon /> },
+    { text: 'Manage Users', path: 'manage-users', icon: <StorageIcon /> },
   ];
 
+  const userNavItems = navItems.slice();
   if (swimStore.currentUser && swimStore.currentUser.isAdmin) {
-    navItems.push({ text: 'Manage Records', path: '/manage-records', icon: <StorageIcon /> });
+    userNavItems.push(...adminNavItems);
   }
 
   return (
@@ -46,8 +61,8 @@ const Sidebar = () => {
       </Toolbar>
       <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: 'calc(100% - 160px)' }}>
         <List>
-          {navItems.map((item) => (
-            <ListItem key={item.text} disablePadding>
+          {userNavItems.map((item) => (
+            <ListItem key={item.path} disablePadding>
               <ListItemButton component={NavLink} to={item.path} sx={{ 
                 color: '#B0B0B0',
                 '&.active': {

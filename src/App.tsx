@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import ManageRecords from './components/ManageRecords';
 import ManageUsers from './components/ManageUsers';
+import GoalTimes from './components/GoalTimes';
 
 const App = observer(() => {
   return (
@@ -19,8 +20,9 @@ const App = observer(() => {
           <Route index element={<Dashboard />} />
           <Route path="log" element={<NewRecordForm />} />
           <Route path="lap-metrics" element={<LapMetrics />} />
-          <Route path="manage-records" element={<ManageRecords />} />
+          <Route path="goal-times" element={<GoalTimes />} />
           <Route element={<AdminRoute />}>
+            <Route path="manage-records" element={<ManageRecords />} />
             <Route path="manage-users" element={<ManageUsers />} />
           </Route>
         </Route>

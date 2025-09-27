@@ -2,19 +2,19 @@
 // In a real implementation, this would be managed by TanStack Router
 export const routes = [
   {
-    path: '/',
+    path: '',
     component: 'Dashboard',
   },
   {
-    path: '/login',
-    component: 'Login',
-  },
-  {
-    path: '/register',
-    component: 'Register',
-  },
-  {
-    path: '/manage-records',
+    path: 'manage-records',
     component: 'ManageRecords',
+  },
+  {
+    path: 'goal-times',
+    component: 'GoalTimes',
+  },
+  {
+    path: 'manage-users',
+    component: 'ManageUsers',
   }
 ];

@@ -15,6 +15,7 @@
     "@mui/icons-material": "^5.15.18",
     "@mui/material": "^5.15.18",
     "@mui/x-charts": "^7.6.0",
+    "@mui/x-data-grid": "^8.12.1",
     "@types/bcryptjs": "^2.4.6",
     "apexcharts": "^5.3.5",
     "bcryptjs": "^3.0.2",

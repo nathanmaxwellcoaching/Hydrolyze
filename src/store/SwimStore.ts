@@ -58,6 +58,24 @@ interface Filters {
   endDate: string | null;
 }
 
+export interface GoalTime {
+  id: string;
+  email: string;
+  stroke: 'Freestyle' | 'Backstroke' | 'Breaststroke' | 'Butterfly';
+  distance: number;
+  gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'No Gear')[];
+  time: number;
+}
+
+export const GOAL_TIMES_CANONICAL_COLUMN_ORDER: (keyof GoalTime | 'id' | 'email' | 'stroke' | 'distance' | 'gear' | 'time')[] = [
+    'id',
+    'email',
+    'stroke',
+    'distance',
+    'gear',
+    'time',
+];
+
 class SwimStore {
   swims: Swim[] = [];
   users: User[] = [];
@@ -73,16 +91,17 @@ class SwimStore {
   velocityChartYAxis: 'v_swim' | 'stroke_index' | 'ie_ratio' | 'stroke_length' = 'v_swim';
   strokeDistributionMetric: 'records' | 'distance' = 'records';
   sortOrder: 'date' | 'duration' = 'date';
+  visibleGoalTimeColumns: (keyof GoalTime)[] = ['id', 'email', 'stroke', 'distance', 'gear', 'time'];
 
   constructor() {
     makeAutoObservable(this, { 
       userSwims: computed,
       filteredSwims: computed,
       swimsForVelocityChart: computed,
-      personalBests: computed, 
-      allFiltersSet: computed, 
-      achievementRates: computed, 
-      averageAndSd: computed, 
+      personalBests: computed,
+      allFiltersSet: computed,
+      achievementRates: computed,
+      averageAndSd: computed,
       velocityDistanceData: computed,
       isAuthenticated: computed,
       currentUser: true,
@@ -98,11 +117,11 @@ class SwimStore {
     if (userSnapshot.empty) {
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash('password', salt);
-      await addDoc(usersCollection, { 
-        name: 'Admin User', 
-        email: 'admin@swintracker.com', 
-        passwordHash, 
-        isAdmin: true 
+      await addDoc(usersCollection, {
+        name: 'Admin User',
+        email: 'admin@swintracker.com',
+        passwordHash,
+        isAdmin: true
       });
     }
 
@@ -270,6 +289,21 @@ class SwimStore {
     this.sortOrder = order;
   }
 
+  setVisibleGoalTimeColumns(columns: (keyof GoalTime)[]) {
+    this.visibleGoalTimeColumns = columns;
+  }
+
+    applyGoalTimeFilters(filters: any) {
+        // Assuming you want to store goal time filters separately from swim filters
+        // You might need to define a new state property for goal time filters in SwimStore
+        console.log("Applying goal time filters:", filters);
+    }
+
+    clearGoalTimeFilters() {
+        // Clear the goal time filters
+        console.log("Clearing goal time filters");
+    }
+
   get userSwims() {
     if (this.currentUser && !this.currentUser.isAdmin) {
       const currentUserName = this.currentUser.name;
@@ -405,7 +439,7 @@ class SwimStore {
   }
 
   get uniqueDistances() {
-    return [...new Set(this.userSwims.map(s => s.distance))].sort((a, b) => a - b);
+    return Array.from(new Set(this.userSwims.map(s => s.distance))).sort((a: number, b: number) => a - b);
   }
 
   get uniqueGear() {

@@ -7,6 +7,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import StorageIcon from '@mui/icons-material/Storage';
 import PeopleIcon from '@mui/icons-material/People';
+import StarIcon from '@mui/icons-material/Star';
 
 const AppDrawer = observer(() => {
   const handleLogout = () => {
@@ -17,6 +18,7 @@ const AppDrawer = observer(() => {
     { text: 'Dashboard', path: '/', icon: <DashboardIcon /> },
     { text: 'Log Swim', path: '/log', icon: <AddCircleOutlineIcon /> },
     { text: 'Lap Metrics', path: '/lap-metrics', icon: <AssessmentIcon /> },
+    { text: 'Goal Times', path: '/goal-times', icon: <StarIcon /> },
   ];
 
   if (swimStore.currentUser && swimStore.currentUser.isAdmin) {
