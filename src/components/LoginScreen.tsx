@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
 import { Box, Card, Typography, TextField, Button, keyframes } from '@mui/material';
@@ -86,3 +85,5 @@ const LoginScreen = observer(() => {
 });
 
 export default LoginScreen;
+
+

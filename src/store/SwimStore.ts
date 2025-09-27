@@ -63,7 +63,7 @@ class SwimStore {
   users: User[] = [];
   currentUser: User | null = null;
   activeFilters: Filters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null };
-  visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !['id', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col));
+  visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !(['id', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col)));
   trendlineStats: TrendlineStat[] = [];
   showTrendline = false;
   showTrendlineDetails = false;
@@ -72,6 +72,7 @@ class SwimStore {
   showVelocityDistanceChart = false;
   velocityChartYAxis: 'v_swim' | 'stroke_index' | 'ie_ratio' | 'stroke_length' = 'v_swim';
   strokeDistributionMetric: 'records' | 'distance' = 'records';
+  sortOrder: 'date' | 'duration' = 'date';
 
   constructor() {
     makeAutoObservable(this, { 
@@ -204,6 +205,21 @@ class SwimStore {
     return this.currentUser !== null;
   }
 
+  async register(name: string, email: string, password: string) {
+    const usersCollection = collection(db, "users");
+    const q = query(usersCollection, where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      throw new Error("User with this email already exists.");
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    await addDoc(usersCollection, { name, email, passwordHash, isAdmin: false });
+    this.loadUsers();
+  }
+
   applyFilters(filters: Partial<Filters>) {
     this.activeFilters = { ...this.activeFilters, ...filters };
   }
@@ -248,6 +264,10 @@ class SwimStore {
 
   setStrokeDistributionMetric(metric: 'records' | 'distance') {
     this.strokeDistributionMetric = metric;
+  }
+
+  setSortOrder(order: 'date' | 'duration') {
+    this.sortOrder = order;
   }
 
   get userSwims() {
@@ -315,9 +335,8 @@ class SwimStore {
 
     return data;
   }
-
   get filteredSwims() {
-    return this.userSwims.filter(swim => {
+    let filtered = this.userSwims.filter(swim => {
       const { swimmer, stroke, distance, gear, poolLength, startDate, endDate } = this.activeFilters;
       if (swimmer && swim.swimmer !== swimmer) return false;
       if (stroke && swim.stroke !== stroke) return false;
@@ -333,6 +352,14 @@ class SwimStore {
       if (endDate && new Date(swim.date) > new Date(endDate)) return false;
       return true;
     });
+
+    if (this.sortOrder === 'date') {
+      filtered = filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    } else if (this.sortOrder === 'duration') {
+      filtered = filtered.sort((a, b) => a.duration - b.duration);
+    }
+
+    return filtered;
   }
 
   get filterContext() {
@@ -504,3 +531,4 @@ class SwimStore {
 
 const swimStore = new SwimStore();
 export default swimStore;
+

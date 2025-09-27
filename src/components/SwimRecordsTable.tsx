@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton } from '@mui/material';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import ColumnSelector from './ColumnSelector';
 import type { Swim } from '../store/SwimStore';
@@ -49,10 +49,28 @@ const SwimRecordsTable = observer(() => {
     setAnchorEl(null);
   };
 
+  const handleSortChange = (event: any) => {
+    swimStore.setSortOrder(event.target.value);
+  };
+
   return (
     <Paper sx={{ p: 2, backgroundColor: '#1A1A1A', color: '#FFFFFF' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" gutterBottom sx={{ color: '#FFFFFF' }}>Recent Swims</Typography>
+        <FormControl sx={{ m: 1, minWidth: 120 }} size="small">
+          <InputLabel id="sort-select-label" sx={{ color: '#FFFFFF' }}>Sort By</InputLabel>
+          <Select
+            labelId="sort-select-label"
+            id="sort-select"
+            value={swimStore.sortOrder}
+            label="Sort By"
+            onChange={handleSortChange}
+            sx={{ color: '#FFFFFF', '& .MuiSvgIcon-root': { color: '#FFFFFF' } }}
+          >
+            <MenuItem value={"date"}>Date & Time</MenuItem>
+            <MenuItem value={"duration"}>Time Swum</MenuItem>
+          </Select>
+        </FormControl>
         <IconButton onClick={handleColumnSelectorClick} color="inherit">
           <SettingsIcon />
         </IconButton>
@@ -87,3 +105,4 @@ const SwimRecordsTable = observer(() => {
 });
 
 export default SwimRecordsTable;
+
