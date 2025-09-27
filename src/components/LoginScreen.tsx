@@ -78,9 +78,7 @@ const LoginScreen = observer(() => {
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, p: 1.5 }}>
             Login
           </Button>
-          <Typography sx={{ mt: 2 }}>
-            Don't have an account? <Link to="/register">Register</Link>
-          </Typography>
+
         </Box>
       </Card>
     </Box>

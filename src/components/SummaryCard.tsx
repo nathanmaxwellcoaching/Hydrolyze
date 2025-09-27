@@ -18,7 +18,7 @@ const SummaryCard = ({ title, value, subValue }: SummaryCardProps) => {
           {value}
         </Typography>
         <Box sx={{ mt: 2, height: 50, backgroundColor: '#2C2C2C', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography sx={{ color: '#B0B0B0' }}>{subValue}</Typography>
+          <Typography sx={{ color: '#B0B0B0', whiteSpace: 'pre-line' }}>{subValue}</Typography>
         </Box>
       </CardContent>
     </Card>

@@ -6,6 +6,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import StorageIcon from '@mui/icons-material/Storage';
+import PeopleIcon from '@mui/icons-material/People';
 
 const AppDrawer = observer(() => {
   const handleLogout = () => {
@@ -20,6 +21,7 @@ const AppDrawer = observer(() => {
 
   if (swimStore.currentUser && swimStore.currentUser.isAdmin) {
     navItems.push({ text: 'Manage Records', path: '/manage-records', icon: <StorageIcon /> });
+    navItems.push({ text: 'Manage Users', path: '/manage-users', icon: <PeopleIcon /> });
   }
 
   return (

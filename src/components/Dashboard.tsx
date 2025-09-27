@@ -10,6 +10,14 @@ import SwimRecordsTable from './SwimRecordsTable';
 import VelocityDistanceChart from './VelocityDistanceChart';
 
 const Dashboard = observer(() => {
+  let sdSubValue = '';
+  if (swimStore.averageAndSd) {
+    const { average, standardDeviation, swimCount } = swimStore.averageAndSd;
+    const plus2sd = (average + 2 * standardDeviation).toFixed(2);
+    const minus2sd = (average - 2 * standardDeviation).toFixed(2);
+    sdSubValue = `mean ± 2SDs (${minus2sd} - ${plus2sd})  (${swimCount} swims)`;
+  }
+
   return (
     <Box>
       {/* Summary Cards */}
@@ -24,7 +32,7 @@ const Dashboard = observer(() => {
           <SummaryCard title="Avg Time Swum (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.average : 'N/A'} subValue={swimStore.averageAndSd ? `Based on ${swimStore.averageAndSd.swimCount} swims` : ''} />
         </Grid>
         <Grid item xs={12} sm={6} md={6} lg={3}>
-          <SummaryCard title="Time Swum SD (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.standardDeviation : 'N/A'} subValue={swimStore.averageAndSd ? `Based on ${swimStore.averageAndSd.swimCount} swims` : ''} />
+          <SummaryCard title="Time Swum SD (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.standardDeviation : 'N/A'} subValue={sdSubValue} />
         </Grid>
       </Grid>
 

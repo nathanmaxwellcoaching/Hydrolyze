@@ -60,6 +60,7 @@ interface Filters {
 
 class SwimStore {
   swims: Swim[] = [];
+  users: User[] = [];
   currentUser: User | null = null;
   activeFilters: Filters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null };
   visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !['id', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col));
@@ -75,7 +76,8 @@ class SwimStore {
   constructor() {
     makeAutoObservable(this, { 
       userSwims: computed,
-      filteredSwims: computed, 
+      filteredSwims: computed,
+      swimsForVelocityChart: computed,
       personalBests: computed, 
       allFiltersSet: computed, 
       achievementRates: computed, 
@@ -85,6 +87,7 @@ class SwimStore {
       currentUser: true,
     });
     this.loadSwims();
+    this.loadUsers();
   }
 
   async loadSwims() {
@@ -134,7 +137,16 @@ class SwimStore {
     }
   }
 
-  async register(name: string, email: string, password: string) {
+  async loadUsers() {
+    const usersCollection = collection(db, "users");
+    const userSnapshot = await getDocs(usersCollection);
+    const userList = userSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as User));
+    runInAction(() => {
+      this.users = userList;
+    });
+  }
+
+  async addUser(name: string, email: string, password: string, isAdmin: boolean) {
     const usersCollection = collection(db, "users");
     const q = query(usersCollection, where("email", "==", email));
     const querySnapshot = await getDocs(q);
@@ -145,7 +157,20 @@ class SwimStore {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    await addDoc(usersCollection, { name, email, passwordHash, isAdmin: false });
+    await addDoc(usersCollection, { name, email, passwordHash, isAdmin });
+    this.loadUsers();
+  }
+
+  async updateUser(id: string, updatedData: Partial<User>) {
+    const userRef = doc(db, "users", id);
+    await updateDoc(userRef, updatedData);
+    this.loadUsers();
+  }
+
+  async deleteUser(id: string) {
+    const userRef = doc(db, "users", id);
+    await deleteDoc(userRef);
+    this.loadUsers();
   }
 
   async login(email: string, password: string): Promise<boolean> {
@@ -233,8 +258,26 @@ class SwimStore {
     return this.swims;
   }
 
+  get swimsForVelocityChart() {
+    return this.userSwims.filter(swim => {
+      const { swimmer, stroke, gear, poolLength, startDate, endDate } = this.activeFilters;
+      if (swimmer && swim.swimmer !== swimmer) return false;
+      if (stroke && swim.stroke !== stroke) return false;
+      if (poolLength && swim.poolLength !== poolLength) return false;
+      if (gear && gear.length > 0) {
+        if (gear.includes('No Gear') && swim.gear.length === 0) {
+          return true;
+        }
+        if (!gear.some(g => swim.gear.includes(g as any))) return false;
+      }
+      if (startDate && new Date(swim.date) < new Date(startDate)) return false;
+      if (endDate && new Date(swim.date) > new Date(endDate)) return false;
+      return true;
+    });
+  }
+
   get velocityDistanceData() {
-    const groupedByDistance = this.filteredSwims.reduce((acc, swim) => {
+    const groupedByDistance = this.swimsForVelocityChart.reduce((acc, swim) => {
       if (!acc[swim.distance]) {
         acc[swim.distance] = [];
       }
