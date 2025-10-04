@@ -1,17 +1,7 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { FormControl, InputLabel, Select, MenuItem, Paper, Button } from '@mui/material';
-import { Grid } from '@mui/material';
-import type { FormControlProps, ButtonProps } from '@mui/material';
-
-const PillFormControl = (props: FormControlProps) => (
-    <FormControl {...props} variant="outlined" sx={{ ...props.sx, '& .MuiOutlinedInput-root': { borderRadius: 50 } }} />
-);
-
-const PillButton = (props: ButtonProps) => (
-    <Button {...props} sx={{ ...props.sx, borderRadius: 50, textTransform: 'none' }} />
-);
+import { FormControl, InputLabel, Select, MenuItem, Paper, Button, Grid } from '@mui/material';
 
 const DashboardFilter = observer(() => {
     const [filters, setFilters] = useState({
@@ -37,54 +27,54 @@ const DashboardFilter = observer(() => {
         swimStore.clearFilters();
     };
 
+    const formInputStyles = {
+      '& .MuiInputBase-root': { backgroundColor: '#191919', color: '#FFFFFF', borderRadius: '8px' },
+      '& .MuiInputLabel-root': { color: '#a9a9a9', '&.Mui-focused': { color: '#FFFFFF' } },
+      '& .MuiOutlinedInput-root': {
+        '& fieldset': { borderColor: '#444' },
+        '&:hover fieldset': { borderColor: 'var(--color-accent-orange)' },
+      },
+      '& .MuiSvgIcon-root': { color: '#a9a9a9' },
+    };
+
     return (
-        <Paper sx={{ p: 2, mb: 3, backgroundColor: '#242424' }}>
+        <Paper sx={{ 
+          p: 2, 
+          mb: 3, 
+          background: 'var(--color-background-card-gradient)', 
+          borderRadius: '16px', 
+          border: '1px solid var(--color-border)' 
+        }}>
             <Grid container spacing={2} alignItems="center">
-                <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    md={2}>
-                    <PillFormControl fullWidth size="small">
+                <Grid item xs={12} sm={6} md={2}>
+                    <FormControl fullWidth size="small" sx={formInputStyles}>
                         <InputLabel>Swimmer</InputLabel>
                         <Select value={filters.swimmer} label="Swimmer" onChange={e => setFilters({...filters, swimmer: e.target.value})}>
                             <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniqueSwimmers.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                         </Select>
-                    </PillFormControl>
+                    </FormControl>
                 </Grid>
-                <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    md={2}>
-                    <PillFormControl fullWidth size="small">
+                <Grid item xs={12} sm={6} md={2}>
+                    <FormControl fullWidth size="small" sx={formInputStyles}>
                         <InputLabel>Stroke</InputLabel>
                         <Select value={filters.stroke} label="Stroke" onChange={e => setFilters({...filters, stroke: e.target.value})}>
                             <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniqueStrokes.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
                         </Select>
-                    </PillFormControl>
+                    </FormControl>
                 </Grid>
-                <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    md={2}>
-                    <PillFormControl fullWidth size="small">
+                <Grid item xs={12} sm={6} md={2}>
+                    <FormControl fullWidth size="small" sx={formInputStyles}>
                         <InputLabel>Distance</InputLabel>
                         <Select value={filters.distance} label="Distance" onChange={e => setFilters({...filters, distance: e.target.value})}>
                             <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniqueDistances.map(d => <MenuItem key={d} value={d}>{`${d}m`}</MenuItem>)}
                         </Select>
-                    </PillFormControl>
+                    </FormControl>
                 </Grid>
-                <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    md={2}>
-                    <PillFormControl fullWidth size="small">
+                <Grid item xs={12} sm={6} md={2}>
+                    <FormControl fullWidth size="small" sx={formInputStyles}>
                         <InputLabel>Gear</InputLabel>
                         <Select<string[]>
                             multiple
@@ -95,32 +85,23 @@ const DashboardFilter = observer(() => {
                         >
                             {swimStore.uniqueGear.map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
                         </Select>
-                    </PillFormControl>
+                    </FormControl>
                 </Grid>
-                <Grid
-                    item
-                    xs={12}
-                    sm={6}
-                    md={2}>
-                    <PillFormControl fullWidth size="small">
+                <Grid item xs={12} sm={6} md={2}>
+                    <FormControl fullWidth size="small" sx={formInputStyles}>
                         <InputLabel>Pool Length</InputLabel>
                         <Select value={filters.poolLength} label="Pool Length" onChange={e => setFilters({...filters, poolLength: e.target.value})}>
+                            <MenuItem value=""><em>Any</em></MenuItem>
                             {swimStore.uniquePoolLengths.map(l => <MenuItem key={l} value={l}>{`${l}m`}</MenuItem>)}
                         </Select>
-                    </PillFormControl>
+                    </FormControl>
                 </Grid>
-                <Grid
-                    item
-                    container
-                    spacing={1}
-                    justifyContent="flex-end"
-                    xs={12}
-                    md={2}>
+                <Grid item container spacing={1} justifyContent="flex-end" xs={12} md={2}>
                     <Grid item>
-                        <PillButton variant="contained" onClick={handleApply}>Apply</PillButton>
+                        <Button variant="contained" onClick={handleApply} sx={{ backgroundColor: 'var(--color-accent-orange)', '&:hover': { backgroundColor: '#e04402' } }}>Apply</Button>
                     </Grid>
                     <Grid item>
-                        <PillButton variant="outlined" onClick={handleClear}>Clear</PillButton>
+                        <Button variant="outlined" onClick={handleClear} sx={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-text-secondary)' }}>Clear</Button>
                     </Grid>
                 </Grid>
             </Grid>

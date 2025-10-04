@@ -23,7 +23,8 @@ export interface Swim {
   distance: number;
   duration: number;
   targetTime?: number;
-  swimmer: string;
+  swimmerEmail: string;
+  swimmer?: string;
   stroke: 'Freestyle' | 'Backstroke' | 'Breaststroke' | 'Butterfly';
   gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'No Gear')[];
   poolLength: 25 | 50;
@@ -34,7 +35,7 @@ export interface Swim {
 export const CANONICAL_COLUMN_ORDER: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = [
   'id',
   'date',
-  'swimmer',
+  'swimmerEmail',
   'distance',
   'stroke',
   'duration',
@@ -106,8 +107,7 @@ class SwimStore {
       isAuthenticated: computed,
       currentUser: true,
     });
-    this.loadSwims();
-    this.loadUsers();
+    this.loadUsers().then(() => this.loadSwims());
   }
 
   async loadSwims() {
@@ -125,26 +125,29 @@ class SwimStore {
       });
     }
 
-    const swimsCollection = collection(db, "swims");
+    const swimsCollection = collection(db, "swimRecords");
     const swimSnapshot = await getDocs(swimsCollection);
     if (swimSnapshot.empty) {
       const initialSwims = [
-        { date: "2025-09-10T10:30", distance: 100, duration: 75, targetTime: 72, swimmer: 'Nathan', stroke: 'Freestyle', gear: [], poolLength: 25 },
-        { date: "2025-09-10T11:00", distance: 50, duration: 45, targetTime: 45, swimmer: 'Lucy', stroke: 'Butterfly', gear: [], poolLength: 25 },
-        { date: "2025-09-10T14:15", distance: 100, duration: 90, targetTime: 95, swimmer: 'Nathan', stroke: 'Backstroke', gear: ['Fins'], poolLength: 50 },
-        { date: "2025-09-10T16:05", distance: 50, duration: 55, targetTime: 50, swimmer: 'Lucy', stroke: 'Breaststroke', gear: [], poolLength: 25 },
-        { date: "2025-09-11T09:00", distance: 200, duration: 160, targetTime: 155, swimmer: 'Nathan', stroke: 'Freestyle', gear: ['Paddles'], poolLength: 50 },
-        { date: "2025-09-11T18:30", distance: 100, duration: 80, targetTime: 80, swimmer: 'Lucy', stroke: 'Freestyle', gear: [], poolLength: 25 },
+        { date: "2025-09-10T10:30", distance: 100, duration: 75, targetTime: 72, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25 },
+        { date: "2025-09-10T11:00", distance: 50, duration: 45, targetTime: 45, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Butterfly', gear: ['noGear'], poolLength: 25 },
+        { date: "2025-09-10T14:15", distance: 100, duration: 90, targetTime: 95, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Backstroke', gear: ['Fins'], poolLength: 50 },
+        { date: "2025-09-10T16:05", distance: 50, duration: 55, targetTime: 50, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Breaststroke', gear: ['noGear'], poolLength: 25 },
+        { date: "2025-09-11T09:00", distance: 200, duration: 160, targetTime: 155, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['Paddles'], poolLength: 50 },
+        { date: "2025-09-11T18:30", distance: 100, duration: 80, targetTime: 80, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25 },
       ];
       initialSwims.forEach(swim => this.addSwim(swim as Omit<Swim, 'id'>));
     } else {
       const swimList = swimSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Swim));
       runInAction(() => {
-        this.swims = swimList;
+        this.swims = swimList.map(s => {
+            const user = this.users.find(u => u.email === s.swimmerEmail);
+            return { ...s, swimmer: user ? user.name : s.swimmerEmail };
+        });
         if (this.swims.length > 0) {
           const mostRecentSwim = this.swims.reduce((prev, current) => (new Date(prev.date) > new Date(current.date)) ? prev : current);
           this.activeFilters = {
-            swimmer: mostRecentSwim.swimmer,
+            swimmer: mostRecentSwim.swimmer || null,
             stroke: mostRecentSwim.stroke,
             distance: mostRecentSwim.distance,
             gear: mostRecentSwim.gear,
@@ -306,8 +309,8 @@ class SwimStore {
 
   get userSwims() {
     if (this.currentUser && !this.currentUser.isAdmin) {
-      const currentUserName = this.currentUser.name;
-      return this.swims.filter(swim => swim.swimmer === currentUserName);
+      const currentUserEmail = this.currentUser.email;
+      return this.swims.filter(swim => swim.swimmerEmail === currentUserEmail);
     }
     return this.swims;
   }
@@ -330,7 +333,7 @@ class SwimStore {
     });
   }
 
-  get velocityDistanceData() {
+ get velocityDistanceData() {
     const groupedByDistance = this.swimsForVelocityChart.reduce((acc, swim) => {
       if (!acc[swim.distance]) {
         acc[swim.distance] = [];
@@ -586,19 +589,19 @@ class SwimStore {
   }
 
   async addSwim(swim: Omit<Swim, 'id'>) {
-    const swimsCollection = collection(db, "swims");
+    const swimsCollection = collection(db, "swimRecords");
     await addDoc(swimsCollection, swim);
     this.loadSwims();
   }
 
   async updateSwim(id: string, updatedData: Partial<Swim>) {
-    const swimRef = doc(db, "swims", id);
+    const swimRef = doc(db, "swimRecords", id);
     await updateDoc(swimRef, updatedData);
     this.loadSwims();
   }
 
   async deleteSwim(id: string) {
-    const swimRef = doc(db, "swims", id);
+    const swimRef = doc(db, "swimRecords", id);
     await deleteDoc(swimRef);
     this.loadSwims();
   }
@@ -606,4 +609,3 @@ class SwimStore {
 
 const swimStore = new SwimStore();
 export default swimStore;
-

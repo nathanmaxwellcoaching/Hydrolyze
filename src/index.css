@@ -1,11 +1,24 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Color Palette */
+  --color-background-main: #0B0B0F;
+  --color-background-card: #121212;
+  --color-background-card-gradient: linear-gradient(135deg, #121212, #0A1A37);
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #a9a9a9;
+  --color-accent-orange: #FC4C02;
+  --color-accent-green: #16EC06;
+  --color-accent-yellow: #FFDE00;
+  --color-accent-red: #FF0100;
+  --color-border: rgba(255, 255, 255, 0.18);
+
+  /* Font */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: dark;
+  color: var(--color-text-primary);
+  background-color: var(--color-background-main);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,26 +26,32 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--color-background-main);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Custom scrollbar for a more modern look */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
+::-webkit-scrollbar-track {
+  background: var(--color-background-main);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2C2C2C;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Remove default button styling */
 button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -40,27 +59,18 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: transparent;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all 0.25s;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Remove default link styling */
+a {
+  font-weight: 500;
+  color: var(--color-accent-orange);
+  text-decoration: inherit;
+  transition: color 0.25s;
+}
+a:hover {
+  color: #e04402;
 }
