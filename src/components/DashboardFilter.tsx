@@ -1,112 +1,101 @@
-import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { FormControl, InputLabel, Select, MenuItem, Paper, Button, Grid } from '@mui/material';
+import { Grid, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
 
 const DashboardFilter = observer(() => {
-    const [filters, setFilters] = useState({
-        swimmer: '',
-        stroke: '',
-        distance: '',
-        gear: [] as string[],
-        poolLength: ''
-    });
+  const handleFilterChange = (filterName: string, value: any) => {
+    const processedValue = value === 'Any' ? null : value;
+    swimStore.applyFilters({ [filterName]: processedValue });
+  };
 
-    const handleApply = () => {
-        swimStore.applyFilters({
-            swimmer: filters.swimmer || null,
-            stroke: filters.stroke || null,
-            distance: filters.distance ? parseInt(filters.distance) : null,
-            gear: filters.gear.length > 0 ? filters.gear : null,
-            poolLength: filters.poolLength ? parseInt(filters.poolLength) : null
-        });
-    };
+  return (
+    <Grid container spacing={2} sx={{ mb: 4 }} className="dashboard-item">
+      {/* Swimmer Filter */}
+      <Grid item xs={12} sm={6} md={4} lg={2}>
+        <FormControl fullWidth size="small">
+          <InputLabel>Swimmer</InputLabel>
+          <Select
+            value={swimStore.activeFilters.swimmer || 'Any'}
+            label="Swimmer"
+            onChange={(e: SelectChangeEvent) => handleFilterChange('swimmer', e.target.value)}
+          >
+            <MenuItem value="Any">Any</MenuItem>
+            {swimStore.uniqueSwimmers.map(swimmer => (
+              <MenuItem key={swimmer} value={swimmer}>{swimmer}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
 
-    const handleClear = () => {
-        setFilters({ swimmer: '', stroke: '', distance: '', gear: [], poolLength: '' });
-        swimStore.clearFilters();
-    };
+      {/* Stroke Filter */}
+      <Grid item xs={12} sm={6} md={4} lg={2}>
+        <FormControl fullWidth size="small">
+          <InputLabel>Stroke</InputLabel>
+          <Select
+            value={swimStore.activeFilters.stroke || 'Any'}
+            label="Stroke"
+            onChange={(e: SelectChangeEvent) => handleFilterChange('stroke', e.target.value)}
+          >
+            <MenuItem value="Any">Any</MenuItem>
+            {swimStore.uniqueStrokes.map(stroke => (
+              <MenuItem key={stroke} value={stroke}>{stroke}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
 
-    const formInputStyles = {
-      '& .MuiInputBase-root': { backgroundColor: '#191919', color: '#FFFFFF', borderRadius: '8px' },
-      '& .MuiInputLabel-root': { color: '#a9a9a9', '&.Mui-focused': { color: '#FFFFFF' } },
-      '& .MuiOutlinedInput-root': {
-        '& fieldset': { borderColor: '#444' },
-        '&:hover fieldset': { borderColor: 'var(--color-accent-orange)' },
-      },
-      '& .MuiSvgIcon-root': { color: '#a9a9a9' },
-    };
+      {/* Distance Filter */}
+      <Grid item xs={12} sm={6} md={4} lg={2}>
+        <FormControl fullWidth size="small">
+          <InputLabel>Distance</InputLabel>
+          <Select
+            value={swimStore.activeFilters.distance || 'Any'}
+            label="Distance"
+            onChange={(e: SelectChangeEvent<number>) => handleFilterChange('distance', e.target.value)}
+          >
+            <MenuItem value="Any">Any</MenuItem>
+            {swimStore.uniqueDistances.map(distance => (
+              <MenuItem key={distance} value={distance}>{distance}m</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
 
-    return (
-        <Paper sx={{ 
-          p: 2, 
-          mb: 3, 
-          background: 'var(--color-background-card-gradient)', 
-          borderRadius: '16px', 
-          border: '1px solid var(--color-border)' 
-        }}>
-            <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth size="small" sx={formInputStyles}>
-                        <InputLabel>Swimmer</InputLabel>
-                        <Select value={filters.swimmer} label="Swimmer" onChange={e => setFilters({...filters, swimmer: e.target.value})}>
-                            <MenuItem value=""><em>Any</em></MenuItem>
-                            {swimStore.uniqueSwimmers.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth size="small" sx={formInputStyles}>
-                        <InputLabel>Stroke</InputLabel>
-                        <Select value={filters.stroke} label="Stroke" onChange={e => setFilters({...filters, stroke: e.target.value})}>
-                            <MenuItem value=""><em>Any</em></MenuItem>
-                            {swimStore.uniqueStrokes.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth size="small" sx={formInputStyles}>
-                        <InputLabel>Distance</InputLabel>
-                        <Select value={filters.distance} label="Distance" onChange={e => setFilters({...filters, distance: e.target.value})}>
-                            <MenuItem value=""><em>Any</em></MenuItem>
-                            {swimStore.uniqueDistances.map(d => <MenuItem key={d} value={d}>{`${d}m`}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth size="small" sx={formInputStyles}>
-                        <InputLabel>Gear</InputLabel>
-                        <Select<string[]>
-                            multiple
-                            value={filters.gear}
-                            label="Gear"
-                            onChange={(e) => setFilters({ ...filters, gear: e.target.value as string[] })}
-                            renderValue={(selected) => selected.join(', ')}
-                        >
-                            {swimStore.uniqueGear.map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2}>
-                    <FormControl fullWidth size="small" sx={formInputStyles}>
-                        <InputLabel>Pool Length</InputLabel>
-                        <Select value={filters.poolLength} label="Pool Length" onChange={e => setFilters({...filters, poolLength: e.target.value})}>
-                            <MenuItem value=""><em>Any</em></MenuItem>
-                            {swimStore.uniquePoolLengths.map(l => <MenuItem key={l} value={l}>{`${l}m`}</MenuItem>)}
-                        </Select>
-                    </FormControl>
-                </Grid>
-                <Grid item container spacing={1} justifyContent="flex-end" xs={12} md={2}>
-                    <Grid item>
-                        <Button variant="contained" onClick={handleApply} sx={{ backgroundColor: 'var(--color-accent-orange)', '&:hover': { backgroundColor: '#e04402' } }}>Apply</Button>
-                    </Grid>
-                    <Grid item>
-                        <Button variant="outlined" onClick={handleClear} sx={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-text-secondary)' }}>Clear</Button>
-                    </Grid>
-                </Grid>
-            </Grid>
-        </Paper>
-    );
+      {/* Pace Distance Filter */}
+      <Grid item xs={12} sm={6} md={4} lg={2}>
+        <FormControl fullWidth size="small">
+          <InputLabel>Pace Distance</InputLabel>
+          <Select
+            value={swimStore.activeFilters.paceDistance || 'Any'}
+            label="Pace Distance"
+            onChange={(e: SelectChangeEvent) => handleFilterChange('paceDistance', e.target.value)}
+          >
+            <MenuItem value="Any">Any</MenuItem>
+            {swimStore.uniquePaceDistances.map(pd => (
+              <MenuItem key={pd} value={pd}>{pd}m</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+
+      {/* Pool Length Filter */}
+      <Grid item xs={12} sm={6} md={4} lg={2}>
+        <FormControl fullWidth size="small">
+          <InputLabel>Pool Length</InputLabel>
+          <Select
+            value={swimStore.activeFilters.poolLength || 'Any'}
+            label="Pool Length"
+            onChange={(e: SelectChangeEvent<number>) => handleFilterChange('poolLength', e.target.value)}
+          >
+            <MenuItem value="Any">Any</MenuItem>
+            {swimStore.uniquePoolLengths.map(length => (
+              <MenuItem key={length} value={length}>{length}m</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Grid>
+    </Grid>
+  );
 });
 
 export default DashboardFilter;

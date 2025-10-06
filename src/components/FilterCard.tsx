@@ -73,6 +73,19 @@ const FilterCard = () => {
               ))}
             </Select>
           </FormControl>
+          <FormControl fullWidth>
+            <InputLabel sx={{ color: '#B0B0B0' }}>Pace Distance</InputLabel>
+            <Select
+                value={swimStore.activeFilters.paceDistance || 'Any'}
+                label="Pace Distance"
+                onChange={(e) => swimStore.applyFilters({ paceDistance: e.target.value === 'Any' ? null : e.target.value })}
+            >
+                <MenuItem value="Any">Any</MenuItem>
+                {swimStore.uniquePaceDistances.map(pd => (
+                    <MenuItem key={pd} value={pd}>{pd}m</MenuItem>
+                ))}
+            </Select>
+          </FormControl>
         </Box>
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
           <Button onClick={() => swimStore.clearFilters()} sx={{ color: '#B0B0B0' }}>Clear</Button>

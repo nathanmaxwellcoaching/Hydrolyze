@@ -30,6 +30,7 @@ export interface Swim {
   poolLength: 25 | 50;
   averageStrokeRate?: number;
   heartRate?: number;
+  paceDistance?: string; // Added paceDistance
 }
 
 export const CANONICAL_COLUMN_ORDER: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = [
@@ -44,6 +45,7 @@ export const CANONICAL_COLUMN_ORDER: (keyof Swim | 'strokeLength' | 'swimIndex' 
   'poolLength',
   'averageStrokeRate',
   'heartRate',
+  'paceDistance', // Added paceDistance
   'strokeLength',
   'swimIndex',
   'ieRatio',
@@ -57,6 +59,7 @@ interface Filters {
   poolLength: number | null;
   startDate: string | null;
   endDate: string | null;
+  paceDistance: string | null; // Added paceDistance
 }
 
 export interface GoalTime {
@@ -81,7 +84,7 @@ class SwimStore {
   swims: Swim[] = [];
   users: User[] = [];
   currentUser: User | null = null;
-  activeFilters: Filters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null };
+  activeFilters: Filters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null, paceDistance: null };
   visibleColumns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[] = CANONICAL_COLUMN_ORDER.filter(col => !(['id', 'poolLength', 'averageStrokeRate', 'heartRate', 'strokeLength', 'swimIndex', 'ieRatio'].includes(col)));
   trendlineStats: TrendlineStat[] = [];
   showTrendline = false;
@@ -129,12 +132,14 @@ class SwimStore {
     const swimSnapshot = await getDocs(swimsCollection);
     if (swimSnapshot.empty) {
       const initialSwims = [
-        { date: "2025-09-10T10:30", distance: 100, duration: 75, targetTime: 72, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25 },
-        { date: "2025-09-10T11:00", distance: 50, duration: 45, targetTime: 45, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Butterfly', gear: ['noGear'], poolLength: 25 },
-        { date: "2025-09-10T14:15", distance: 100, duration: 90, targetTime: 95, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Backstroke', gear: ['Fins'], poolLength: 50 },
-        { date: "2025-09-10T16:05", distance: 50, duration: 55, targetTime: 50, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Breaststroke', gear: ['noGear'], poolLength: 25 },
-        { date: "2025-09-11T09:00", distance: 200, duration: 160, targetTime: 155, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['Paddles'], poolLength: 50 },
-        { date: "2025-09-11T18:30", distance: 100, duration: 80, targetTime: 80, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25 },
+        { date: "2025-09-10T10:30", distance: 100, duration: 75, targetTime: 72, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25, paceDistance: "100" },
+        { date: "2025-09-10T11:00", distance: 50, duration: 45, targetTime: 45, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Butterfly', gear: ['noGear'], poolLength: 25, paceDistance: "50" },
+        { date: "2025-09-10T14:15", distance: 100, duration: 90, targetTime: 95, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Backstroke', gear: ['Fins'], poolLength: 50, paceDistance: "100" },
+        { date: "2025-09-10T16:05", distance: 50, duration: 55, targetTime: 50, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Breaststroke', gear: ['noGear'], poolLength: 25, paceDistance: "50" },
+        { date: "2025-09-11T09:00", distance: 200, duration: 160, targetTime: 155, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['Paddles'], poolLength: 50, paceDistance: "100" },
+        { date: "2025-09-11T18:30", distance: 100, duration: 80, targetTime: 80, swimmerEmail: 'natetgmaxwell@icloud.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25, paceDistance: "100" },
+        { date: "2025-09-12T10:30", distance: 100, duration: 73, targetTime: 72, swimmerEmail: 'john.doe@example.com', stroke: 'Freestyle', gear: ['noGear'], poolLength: 25, paceDistance: "100" },
+        { date: "2025-09-12T11:00", distance: 200, duration: 150, targetTime: 145, swimmerEmail: 'john.doe@example.com', stroke: 'Freestyle', gear: ['Fins', 'Paddles'], poolLength: 50, paceDistance: "200" },
       ];
       initialSwims.forEach(swim => this.addSwim(swim as Omit<Swim, 'id'>));
     } else {
@@ -154,6 +159,7 @@ class SwimStore {
             poolLength: mostRecentSwim.poolLength,
             startDate: null,
             endDate: null,
+            paceDistance: mostRecentSwim.paceDistance || null,
           };
         }
       });
@@ -247,7 +253,7 @@ class SwimStore {
   }
 
   clearFilters() {
-    this.activeFilters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null };
+    this.activeFilters = { swimmer: null, stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null, paceDistance: null };
   }
 
   setVisibleColumns(columns: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')[]) {
@@ -317,10 +323,11 @@ class SwimStore {
 
   get swimsForVelocityChart() {
     return this.userSwims.filter(swim => {
-      const { swimmer, stroke, gear, poolLength, startDate, endDate } = this.activeFilters;
+      const { swimmer, stroke, gear, poolLength, startDate, endDate, paceDistance } = this.activeFilters;
       if (swimmer && swim.swimmer !== swimmer) return false;
       if (stroke && swim.stroke !== stroke) return false;
       if (poolLength && swim.poolLength !== poolLength) return false;
+      if (paceDistance && swim.paceDistance !== paceDistance) return false;
       if (gear && gear.length > 0) {
         if (gear.includes('No Gear') && swim.gear.length === 0) {
           return true;
@@ -334,51 +341,75 @@ class SwimStore {
   }
 
  get velocityDistanceData() {
-    const groupedByDistance = this.swimsForVelocityChart.reduce((acc, swim) => {
-      if (!acc[swim.distance]) {
-        acc[swim.distance] = [];
+    // Step 1: Group swims by a composite key to create dynamic series.
+    // The key consists of swimmer, stroke, distance, gear, pool length, and pace distance.
+    const groups = this.swimsForVelocityChart.reduce((acc, swim) => {
+      const gearStr = swim.gear && swim.gear.length > 0 ? swim.gear.join(',') : 'No Gear';
+      // Create a unique key for each combination of swim attributes.
+      const key = `${swim.swimmerEmail}-${swim.stroke}-${swim.distance}-${gearStr}-${swim.poolLength}-${swim.paceDistance}`;
+      
+      if (!acc[key]) {
+        // Step 2: Create a readable label for the legend.
+        const shortEmail = swim.swimmerEmail.split('@')[0];
+        const shortStroke = swim.stroke.substring(0, 3);
+        const shortGear = gearStr.length > 10 ? gearStr.substring(0, 10) + '...' : gearStr;
+        acc[key] = {
+          // Example label: "John-Doe-Fre-100m-Fins-25m-100"
+          label: `${shortEmail}-${shortStroke}-${swim.distance}m-${shortGear}-${swim.poolLength}m-${swim.paceDistance}`,
+          data: []
+        };
       }
-      acc[swim.distance].push(swim);
+      
+      // Step 3: Calculate the metric for the Y-axis based on the user's selection.
+      const vSwim = swim.distance / swim.duration;
+      const strokeLength = swim.averageStrokeRate ? vSwim / (swim.averageStrokeRate / 60) : 0;
+      const strokeIndex = strokeLength * vSwim;
+      const ieRatio = strokeIndex > 0 && swim.heartRate ? swim.heartRate / strokeIndex : 0;
+      
+      let yValue;
+      switch (this.velocityChartYAxis) {
+        case 'v_swim': yValue = vSwim; break;
+        case 'stroke_length': yValue = strokeLength; break;
+        case 'stroke_index': yValue = strokeIndex; break;
+        case 'ie_ratio': yValue = ieRatio; break;
+        default: yValue = 0;
+      }
+      
+      // The X-axis is always distance, even though it's part of the series key.
+      acc[key].data.push({ x: swim.distance, y: yValue });
       return acc;
-    }, {} as Record<number, Swim[]>);
+    }, {} as Record<string, { label: string; data: { x: number; y: number }[] }>);
 
-    const data = Object.entries(groupedByDistance).map(([distance, swims]) => {
-      const d = Number(distance);
-
-      const yValues = swims.map(swim => {
-        const vSwim = swim.distance / swim.duration;
-        const strokeLength = swim.averageStrokeRate ? vSwim / (swim.averageStrokeRate / 60) : 0;
-        const strokeIndex = strokeLength * vSwim;
-        const ieRatio = strokeIndex > 0 && swim.heartRate ? swim.heartRate / strokeIndex : 0;
-
-        switch (this.velocityChartYAxis) {
-          case 'v_swim':
-            return vSwim;
-          case 'stroke_length':
-            return strokeLength;
-          case 'stroke_index':
-            return strokeIndex;
-          case 'ie_ratio':
-            return ieRatio;
-          default:
-            return 0;
+    // Step 4: Format the grouped data into the structure required by the charting library.
+    return Object.values(groups).map(group => {
+      // Aggregate data points that share the same X-value (distance) within a series.
+      // This handles cases where multiple swims have the exact same attributes.
+      const aggregatedData = group.data.reduce((acc, item) => {
+        if (!acc[item.x]) {
+          acc[item.x] = { sum: 0, count: 0 };
         }
-      });
+        acc[item.x].sum += item.y;
+        acc[item.x].count++;
+        return acc;
+      }, {} as Record<number, { sum: number; count: number }>);
 
-      const avgYValue = yValues.reduce((acc, val) => acc + val, 0) / yValues.length;
-
-      return { x: `${d}m`, y: parseFloat(avgYValue.toFixed(2)) };
+      return {
+        name: group.label, // Use the generated label for the series name.
+        data: Object.entries(aggregatedData).map(([distance, { sum, count }]) => ({
+          x: `${distance}m`, // Format X-axis label.
+          y: parseFloat((sum / count).toFixed(2)), // Average the Y-values and format to 2 decimal places.
+        })).sort((a, b) => parseInt(a.x) - parseInt(b.x)), // Sort data points by distance.
+      };
     });
-
-    return data;
   }
   get filteredSwims() {
     let filtered = this.userSwims.filter(swim => {
-      const { swimmer, stroke, distance, gear, poolLength, startDate, endDate } = this.activeFilters;
+      const { swimmer, stroke, distance, gear, poolLength, startDate, endDate, paceDistance } = this.activeFilters;
       if (swimmer && swim.swimmer !== swimmer) return false;
       if (stroke && swim.stroke !== stroke) return false;
       if (distance && swim.distance !== distance) return false;
       if (poolLength && swim.poolLength !== poolLength) return false;
+      if (paceDistance && swim.paceDistance !== paceDistance) return false;
       if (gear && gear.length > 0) {
         if (gear.includes('No Gear') && swim.gear.length === 0) {
           return true;
@@ -400,8 +431,8 @@ class SwimStore {
   }
 
   get filterContext() {
-    const { swimmer, distance, stroke, gear } = this.activeFilters;
-    return `${swimmer || ''} ${distance || ''}m ${stroke || ''} ${gear?.join(' ') || ''}`.trim();
+    const { swimmer, distance, stroke, gear, paceDistance } = this.activeFilters;
+    return `${swimmer || ''} ${distance || ''}m ${stroke || ''} ${gear?.join(' ') || ''} ${paceDistance || ''}m pace`.trim();
   }
 
   get strokeDistribution() {
@@ -451,6 +482,10 @@ class SwimStore {
 
   get uniquePoolLengths() {
     return [...new Set(this.userSwims.map(s => s.poolLength))].sort((a, b) => a - b);
+  }
+
+  get uniquePaceDistances() {
+    return [...new Set(this.userSwims.map(s => s.paceDistance).filter(Boolean))].sort();
   }
 
   get averagePace() {

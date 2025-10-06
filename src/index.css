@@ -1,24 +1,93 @@
+
+/*
+  File: index.css
+  Description: Redesigned global stylesheet for the Swim App.
+  - Establishes a modern, dark-first theme inspired by fitness trackers like Whoop and Strava.
+  - Defines a vibrant, energetic color palette using CSS custom properties for easy reuse.
+  - Implements responsive design principles and custom scrollbars for a polished look.
+  - Resets default browser styles for consistency.
+*/
+
+/* ----------------- FONT IMPORT: JetBrains Mono Nerd Font ----------------- */
+/* Import Regular, Medium, and Bold weights for a versatile typographic system. */
+/* Using 'swap' ensures text is visible while the font loads, improving perceived performance. */
+
+/* Regular 400 */
+@font-face {
+  font-family: 'JetBrains Mono Nerd Font';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Regular/static/JetBrainsMonoNerdFont-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Italic 400 */
+@font-face {
+  font-family: 'JetBrains Mono Nerd Font';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Italic/static/JetBrainsMonoNerdFont-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Medium 500 */
+@font-face {
+  font-family: 'JetBrains Mono Nerd Font';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Medium/static/JetBrainsMonoNerdFont-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bold 700 */
+@font-face {
+  font-family: 'JetBrains Mono Nerd Font';
+  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Bold/static/JetBrainsMonoNerdFont-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
-  /* Color Palette */
-  --color-background-main: #0B0B0F;
-  --color-background-card: #121212;
-  --color-background-card-gradient: linear-gradient(135deg, #121212, #0A1A37);
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #a9a9a9;
-  --color-accent-orange: #FC4C02;
-  --color-accent-green: #16EC06;
-  --color-accent-yellow: #FFDE00;
-  --color-accent-red: #FF0100;
-  --color-border: rgba(255, 255, 255, 0.18);
+  /* ----------------- NEW COLOR PALETTE ----------------- */
+  /* Base & Backgrounds */
+  --color-background-dark: #121212; /* Primary dark background */
+  --color-background-card: #191919; /* Slightly lighter for cards */
+  --color-text-light: #FFFFFF;
+  --color-text-dark: #000000;
+  --color-text-secondary: #a9a9a9; /* For less important text */
+
+  /* Vibrant Accents */
+  --color-accent-green: #71EB4B;
+  --color-accent-blue-purple: #717EBB;
+  --color-accent-light-blue: #70A6EB;
+  --color-accent-mint: #71EBD9;
+  --color-accent-cyan: #81EBED;
+  --color-accent-yellow: #F5EB4B;
+  --color-accent-light-mint: #BDF5EB;
+  --color-accent-light-lavender: #BDBDF5;
+  --color-accent-pinkish: #F5EBF5;
+
+  /* Call-to-Action & Buttons */
+  --color-cta-primary: #0A4EB2; /* Complementary color for primary actions */
+  --color-cta-primary-hover: #0E62E0;
+
+  /* Gradient Definitions */
+  --gradient-energetic: linear-gradient(135deg, var(--color-accent-green), var(--color-accent-light-blue));
+  --gradient-calm: linear-gradient(135deg, var(--color-accent-mint), var(--color-accent-light-lavender));
+  --gradient-login: linear-gradient(135deg, #121212, #0A1A37); /* Kept from original, fits well */
 
   /* Font */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  /* Set the default font to JetBrains Mono Nerd Font. Monospace is a fallback. */
+  /* This ensures data-heavy UI elements like tables and stats are perfectly aligned. */
+  font-family: 'JetBrains Mono Nerd Font', monospace;
+  line-height: 1.5; /* Increased line-height for better readability in dense data displays. */
   font-weight: 400;
 
+  /* Default to dark theme */
   color-scheme: dark;
-  color: var(--color-text-primary);
-  background-color: var(--color-background-main);
+  color: var(--color-text-light);
+  background-color: var(--color-background-dark);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -30,29 +99,34 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--color-background-main);
+  background-color: var(--color-background-dark);
+  overflow-x: hidden; /* Prevent horizontal scroll from minor overflows */
 }
 
-/* Custom scrollbar for a more modern look */
+/* ----------------- CUSTOM SCROLLBAR ----------------- */
+/* A more subtle scrollbar that matches the dark theme */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-background-main);
+  background: var(--color-background-dark);
 }
 
 ::-webkit-scrollbar-thumb {
   background: #2C2C2C;
-  border-radius: 4px;
+  border-radius: 5px;
+  border: 2px solid var(--color-background-dark);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
-/* Remove default button styling */
+/* ----------------- STYLE RESETS & DEFAULTS ----------------- */
 button {
+  /* Resetting button for custom styling */
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
@@ -61,16 +135,76 @@ button {
   font-family: inherit;
   background-color: transparent;
   cursor: pointer;
-  transition: all 0.25s;
+  transition: all 0.25s ease-in-out; /* Smooth transitions for all button interactions */
 }
 
-/* Remove default link styling */
 a {
   font-weight: 500;
-  color: var(--color-accent-orange);
-  text-decoration: inherit;
+  color: var(--color-accent-light-blue); /* Use a vibrant accent for links */
+  text-decoration: none; /* Modern look without underlines */
   transition: color 0.25s;
 }
+
 a:hover {
-  color: #e04402;
+  color: var(--color-accent-green);
+}
+
+/* ----------------- UTILITY CLASSES ----------------- */
+.card {
+  background-color: var(--color-background-card);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* Style for the theme toggle button (visual only) */
+.theme-toggle-button {
+  background-color: var(--color-cta-primary);
+  color: var(--color-text-light);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-button:hover {
+  background-color: var(--color-cta-primary-hover);
+  transform: scale(1.1);
+}
+
+/* ----------------- RESPONSIVENESS ----------------- */
+/* Hide sidebar on mobile by default */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    position: fixed;
+    z-index: 1100; /* Ensure it's above other content */
+  }
+
+  .hamburger-menu {
+    display: block; /* Will be used in the Header component */
+  }
+}
+
+@media (min-width: 769px) {
+  .hamburger-menu {
+    display: none;
+  }
 }

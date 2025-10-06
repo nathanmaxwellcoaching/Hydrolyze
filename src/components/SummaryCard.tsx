@@ -1,5 +1,6 @@
+
 import { Card, CardContent, Typography, Box } from '@mui/material';
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import anime from 'animejs';
 
 interface SummaryCardProps {
@@ -7,57 +8,80 @@ interface SummaryCardProps {
   value: string | number;
   subValue?: string;
   customContent?: React.ReactNode;
+  // Allow passing a custom gradient for variety in the dashboard
+  gradient?: string;
 }
 
-const SummaryCard = ({ title, value, subValue, customContent }: SummaryCardProps) => {
+const SummaryCard = ({ title, value, subValue, customContent, gradient }: SummaryCardProps) => {
   const cardRef = useRef(null);
 
-  useEffect(() => {
+  // Anime.js hover effects for interactive feedback.
+  const handleMouseEnter = () => {
     anime({
       targets: cardRef.current,
-      opacity: [0, 1],
-      translateY: [50, 0],
-      duration: 600,
-      easing: 'easeOutQuad',
+      scale: 1.05,
+      duration: 300,
+      easing: 'easeOutExpo',
     });
-  }, []);
+  };
+
+  const handleMouseLeave = () => {
+    anime({
+      targets: cardRef.current,
+      scale: 1,
+      duration: 400,
+      easing: 'easeOutExpo',
+    });
+  };
 
   return (
-    <Card 
+    <Card
       ref={cardRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       sx={{
-        background: 'var(--color-background-card-gradient)',
-        color: 'var(--color-text-primary)',
+        // Use the standard dark card background for better readability.
+        background: 'var(--color-background-card)',
+        color: 'var(--color-text-light)',
         height: '100%',
         borderRadius: '16px',
-        border: '1px solid var(--color-border)',
-        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-        transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
-        opacity: 0, // Initial state for anime.js
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+        transition: 'box-shadow 0.3s ease, border-color 0.3s ease',
+        willChange: 'transform', // Performance optimization for animations
+        // Add a subtle color accent with a top border.
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        borderTop: `3px solid ${gradient || 'var(--color-accent-green)'}`, // Use gradient prop for color or default
         '&:hover': {
-          transform: 'scale(1.05)',
-          boxShadow: '0 0 25px rgba(252, 76, 2, 0.5)',
+          // The hover effect is now a more subtle glow, improving readability.
+          boxShadow: `0 0 25px -10px ${gradient || 'var(--color-accent-green)'}`,
         },
       }}
     >
-      <CardContent>
-        <Typography sx={{ fontSize: 14, color: 'var(--color-text-secondary)', fontWeight: '500' }} gutterBottom>
-          {title}
-        </Typography>
-        <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
-          {value}
-        </Typography>
-        <Box sx={{ 
-          mt: 2, 
-          minHeight: 50, 
-          backgroundColor: 'rgba(0,0,0,0.2)', 
-          borderRadius: '8px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          p: 1 
-        }}>
-          {customContent ? customContent : <Typography sx={{ color: 'var(--color-text-secondary)', whiteSpace: 'pre-line', textAlign: 'center', fontSize: '0.8rem' }}>{subValue}</Typography>}
+      <CardContent sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+        <Box>
+          <Typography sx={{ fontSize: 16, fontWeight: '600', opacity: 0.8 }} gutterBottom>
+            {title}
+          </Typography>
+          <Typography variant="h3" component="div" sx={{ fontWeight: 'bold', mb: 1 }}>
+            {value}
+          </Typography>
+        </Box>
+        <Box sx={{
+          mt: 2,
+          minHeight: 40,
+          // Inset look for the sub-value/custom content area.
+          backgroundColor: 'rgba(0,0,0,0.25)',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 1.5,
+        }} >
+          {customContent ? customContent : (
+            <Typography sx={{ color: 'var(--color-text-light)', opacity: 0.9, whiteSpace: 'pre-line', textAlign: 'center', fontSize: '0.85rem' }}>
+              {subValue}
+            </Typography>
+          )}
         </Box>
       </CardContent>
     </Card>

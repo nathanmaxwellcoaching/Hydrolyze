@@ -1,6 +1,5 @@
-
-import { NavLink } from 'react-router-dom';
-import { Toolbar, List, ListItem, ListItemButton, ListItemText, Box, Typography, Avatar, Button, SvgIcon } from '@mui/material';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Toolbar, List, ListItem, ListItemButton, ListItemText, Box, Typography, Button, SvgIcon } from '@mui/material';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -10,14 +9,19 @@ import StorageIcon from '@mui/icons-material/Storage';
 import PeopleIcon from '@mui/icons-material/People';
 import StarIcon from '@mui/icons-material/Star';
 import LogoutIcon from '@mui/icons-material/Logout';
+import PoolIcon from '@mui/icons-material/Pool';
 import { useEffect } from 'react';
 import anime from 'animejs';
 
 const AppDrawer = observer(() => {
+  const navigate = useNavigate();
+
   const handleLogout = () => {
     swimStore.logout();
+    navigate('/login'); // Redirect to login after logout
   };
 
+  // Navigation items configuration
   const navItems = [
     { text: 'Dashboard', path: '/', icon: <DashboardIcon /> },
     { text: 'Log Swim', path: '/log', icon: <AddCircleOutlineIcon /> },
@@ -25,103 +29,108 @@ const AppDrawer = observer(() => {
     { text: 'Goal Times', path: '/goal-times', icon: <StarIcon /> },
   ];
 
-  if (swimStore.currentUser && swimStore.currentUser.isAdmin) {
+  if (swimStore.currentUser?.isAdmin) {
     navItems.push({ text: 'Manage Records', path: '/manage-records', icon: <StorageIcon /> });
     navItems.push({ text: 'Manage Users', path: '/manage-users', icon: <PeopleIcon /> });
   }
 
+  // Staggered animation for nav items on load
   useEffect(() => {
     anime({
       targets: '.nav-item',
-      translateX: [-250, 0],
+      translateX: [-280, 0],
+      opacity: [0, 1],
       delay: anime.stagger(100, { start: 200 }),
-      easing: 'easeInOutQuad',
+      easing: 'easeOutExpo',
     });
   }, []);
 
   return (
-    <>
-      <Toolbar sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        flexDirection: 'column', 
-        p: 2, 
-        background: 'linear-gradient(135deg, #121212, #0A1A37)', 
-        borderBottom: '1px solid var(--color-border)' 
-      }}>
-        <Avatar sx={{ 
-          width: 80, 
-          height: 80, 
-          mb: 1.5, 
-          border: '3px solid transparent',
-          background: 'linear-gradient(#121212, #121212) padding-box, linear-gradient(135deg, var(--color-accent-orange), var(--color-accent-yellow)) border-box'
-        }} />
-        <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{swimStore.currentUser?.name}</Typography>
-        <Typography variant="body2" sx={{ color: 'var(--color-text-secondary)' }}>{swimStore.currentUser?.email}</Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Drawer Header with App Logo/Name */}
+      <Toolbar sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <PoolIcon sx={{ fontSize: 40, color: 'var(--color-accent-cyan)' }} />
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 'bold', 
+            background: 'var(--gradient-energetic)', 
+            WebkitBackgroundClip: 'text', 
+            WebkitTextFillColor: 'transparent' 
+          }}>
+          SwimTracker
+        </Typography>
       </Toolbar>
-      <Box sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <List sx={{ p: 1 }}>
-          {navItems.map((item) => (
-            <ListItem key={item.text} disablePadding className="nav-item">
-              <ListItemButton 
-                component={NavLink} 
-                to={item.path} 
-                sx={{ 
+
+      {/* Navigation List */}
+      <List sx={{ p: 1, flexGrow: 1 }}>
+        {navItems.map((item) => (
+          <ListItem key={item.text} disablePadding className="nav-item" sx={{ opacity: 0 }}>
+            <ListItemButton
+              component={NavLink}
+              to={item.path}
+              end // Ensure exact match for active style
+              sx={{
+                color: 'var(--color-text-secondary)',
+                borderRadius: '12px',
+                m: 0.5,
+                py: 1.5,
+                transition: 'all 0.3s ease',
+                ' & .MuiSvgIcon-root': {
                   color: 'var(--color-text-secondary)',
-                  borderRadius: '8px',
-                  m: 0.5,
-                  '& .MuiSvgIcon-root': {
-                    color: 'var(--color-text-secondary)',
-                    transition: 'color 0.3s',
+                  transition: 'color 0.3s',
+                },
+                '&:hover': {
+                  backgroundColor: 'rgba(113, 235, 75, 0.1)', // Light green hover
+                  color: 'var(--color-text-light)',
+                  ' & .MuiSvgIcon-root': {
+                    color: 'var(--color-accent-green)',
                   },
-                  '&:hover': {
-                    backgroundColor: 'rgba(252, 76, 2, 0.1)',
-                    color: 'var(--color-text-primary)',
-                    '& .MuiSvgIcon-root': {
-                      color: 'var(--color-accent-orange)',
-                    },
+                },
+                // Style for the active navigation link
+                '&.active': {
+                  background: 'var(--gradient-energetic)',
+                  color: 'var(--color-text-light)',
+                  boxShadow: '0 0 20px rgba(113, 235, 75, 0.6)',
+                  ' & .MuiSvgIcon-root': {
+                    color: 'var(--color-text-light)',
                   },
-                  '&.active': {
-                    backgroundColor: 'var(--color-accent-orange)',
-                    color: 'var(--color-text-primary)',
-                    boxShadow: '0 0 15px rgba(252, 76, 2, 0.5)',
-                    '& .MuiSvgIcon-root': {
-                      color: 'var(--color-text-primary)',
-                    },
-                  }
-              }}>
-                <SvgIcon sx={{ mr: 2 }}>{item.icon}</SvgIcon>
-                <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: '500' }} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-        <Box sx={{ marginTop: 'auto', p: 2 }}>
-          <Button 
-            variant="contained" 
-            onClick={handleLogout} 
-            fullWidth
-            startIcon={<LogoutIcon />}
-            sx={{
-              backgroundColor: 'var(--color-accent-orange)',
-              color: 'var(--color-text-primary)',
-              fontWeight: 'bold',
-              p: 1.5,
-              borderRadius: '8px',
-              transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-              '&:hover': {
-                backgroundColor: '#e04402',
-                transform: 'scale(1.02)',
-                boxShadow: '0 0 20px rgba(252, 76, 2, 0.7)',
-              },
-            }}
-          >
-            Logout
-          </Button>
-        </Box>
+                }
+              }}
+            >
+              <SvgIcon sx={{ mr: 2 }}>{item.icon}</SvgIcon>
+              <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: '600' }} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+      {/* Logout Button at the bottom */}
+      <Box sx={{ p: 2 }}>
+        <Button
+          variant="contained"
+          onClick={handleLogout}
+          fullWidth
+          startIcon={<LogoutIcon />}
+          sx={{
+            // Styling consistent with other primary CTAs
+            backgroundColor: 'var(--color-cta-primary)',
+            color: 'var(--color-text-light)',
+            fontWeight: 'bold',
+            p: 1.5,
+            borderRadius: '12px',
+            transition: 'transform 0.2s ease, box-shadow 0.3s ease, background-color 0.3s ease',
+            '&:hover': {
+              backgroundColor: 'var(--color-cta-primary-hover)',
+              transform: 'scale(1.03)',
+              boxShadow: '0 0 20px rgba(10, 78, 178, 0.7)',
+            },
+          }}
+        >
+          Logout
+        </Button>
       </Box>
-    </>
+    </Box>
   );
 });
 

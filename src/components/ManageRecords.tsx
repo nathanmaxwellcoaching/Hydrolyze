@@ -6,7 +6,6 @@ import type { Swim } from '../store/SwimStore';
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Button, TextField, IconButton, Box } from '@mui/material';
 import ColumnSelector from './ColumnSelector';
 import SettingsIcon from '@mui/icons-material/Settings';
-import DashboardFilter from './DashboardFilter';
 import anime from 'animejs';
 
 const columnDisplayNames: { [key: string]: string } = {
@@ -89,7 +88,6 @@ const ManageRecords = observer(() => {
 
   return (
     <Box ref={pageRef} sx={{ opacity: 0 }}>
-      <DashboardFilter />
       <Paper sx={{ 
         p: 2, 
         background: 'var(--color-background-card-gradient)', 
@@ -148,3 +146,7 @@ const ManageRecords = observer(() => {
 });
 
 export default ManageRecords;
+
+
+
+

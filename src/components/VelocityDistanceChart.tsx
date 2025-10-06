@@ -3,8 +3,26 @@ import { observer } from 'mobx-react-lite';
 import Chart from 'react-apexcharts';
 import swimStore from '../store/SwimStore';
 import { Paper, Typography, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { useEffect, useRef } from 'react';
+import anime from 'animejs';
+
+// Color palette for dynamic series
+const seriesColors = ['#71EB4B', '#70A6EB', '#EB4B71', '#EBEB4B', '#A64BEB', '#4BEBEB'];
 
 const VelocityDistanceChart = observer(() => {
+  const chartRef = useRef(null);
+
+  // Animate chart on data change
+  useEffect(() => {
+    if (chartRef.current) {
+      anime({
+        targets: chartRef.current,
+        opacity: [0, 1],
+        duration: 800,
+        easing: 'easeOutExpo',
+      });
+    }
+  }, [swimStore.velocityDistanceData]);
 
   const handleMetricChange = (
     _event: React.MouseEvent<HTMLElement>,
@@ -29,6 +47,9 @@ const VelocityDistanceChart = observer(() => {
     stroke_length: 'Stroke Length vs. Distance',
   };
 
+  // The data from the store is already in the correct series format
+  const series = swimStore.velocityDistanceData;
+
   const options: any = {
     chart: {
       background: 'transparent',
@@ -36,7 +57,8 @@ const VelocityDistanceChart = observer(() => {
       animations: { enabled: true, easing: 'easeout', speed: 800 },
     },
     theme: { mode: 'dark' as const },
-    colors: ['var(--color-accent-orange)'],
+    // Assign colors dynamically based on the number of series
+    colors: series.map((_, index) => seriesColors[index % seriesColors.length]),
     plotOptions: {
       bar: {
         horizontal: false,
@@ -49,6 +71,13 @@ const VelocityDistanceChart = observer(() => {
     grid: {
       borderColor: 'rgba(255, 255, 255, 0.1)',
       strokeDashArray: 3,
+    },
+    legend: {
+        show: true,
+        position: 'top',
+        horizontalAlign: 'left',
+        labels: { colors: 'var(--color-text-secondary)' },
+        itemMargin: { horizontal: 10, vertical: 5 },
     },
     xaxis: {
       type: 'category' as const,
@@ -82,11 +111,6 @@ const VelocityDistanceChart = observer(() => {
       style: { color: 'var(--color-text-secondary)', fontSize: '16px' },
     },
   };
-
-  const series = [{
-    name: yAxisTitles[swimStore.velocityChartYAxis],
-    data: swimStore.velocityDistanceData,
-  }];
 
   return (
     <Paper sx={{ 
@@ -130,7 +154,9 @@ const VelocityDistanceChart = observer(() => {
         <ToggleButton value="ie_ratio" aria-label="ie ratio">IE Ratio</ToggleButton>
         <ToggleButton value="stroke_length" aria-label="stroke length">Stroke Length</ToggleButton>
       </ToggleButtonGroup>
-      <Chart options={options} series={series} type="bar" height={350} />
+      <div ref={chartRef}>
+        <Chart options={options} series={series} type="bar" height={350} />
+      </div>
     </Paper>
   );
 });

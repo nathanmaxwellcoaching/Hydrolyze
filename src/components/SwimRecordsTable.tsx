@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
@@ -7,6 +8,7 @@ import ColumnSelector from './ColumnSelector';
 import type { Swim } from '../store/SwimStore';
 import anime from 'animejs';
 
+// Column display names (no changes needed)
 const columnDisplayNames: { [key: string]: string } = {
   id: 'ID',
   swimmer: 'Swimmer',
@@ -24,8 +26,8 @@ const columnDisplayNames: { [key: string]: string } = {
   ieRatio: 'IE Ratio',
 };
 
+// Getter for column values (logic unchanged)
 const getColumnValue = (record: Swim, column: (keyof Swim | 'strokeLength' | 'swimIndex' | 'ieRatio')) => {
-  // ... (existing function, no changes needed)
   switch (column) {
     case 'strokeLength':
       return swimStore.calculateStrokeLength(record);
@@ -44,86 +46,81 @@ const SwimRecordsTable = observer(() => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const tableBodyRef = useRef(null);
 
+  // Staggered animation for table rows on data change.
   useEffect(() => {
     if (tableBodyRef.current) {
       anime({
         targets: (tableBodyRef.current as HTMLElement).children,
         opacity: [0, 1],
-        translateY: [20, 0],
-        delay: anime.stagger(50),
-        easing: 'easeOutQuad',
+        translateY: [15, 0],
+        delay: anime.stagger(75), // Slightly faster stagger
+        easing: 'easeOutExpo', // Smoother easing
       });
     }
   }, [swimStore.filteredSwims]);
 
-  const handleColumnSelectorClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  const handleColumnSelectorClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+  const handleColumnSelectorClose = () => setAnchorEl(null);
+  const handleSortChange = (event: any) => swimStore.setSortOrder(event.target.value);
 
-  const handleColumnSelectorClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleSortChange = (event: any) => {
-    swimStore.setSortOrder(event.target.value);
-  };
-
-  const formInputStyles = {
+  // Reusable styles for form controls, consistent with the new design.
+  const formControlStyles = {
     '& .MuiInputBase-root': {
-      backgroundColor: '#191919',
-      color: '#FFFFFF',
+      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+      color: 'var(--color-text-light)',
       borderRadius: '8px',
     },
-    '& .MuiInputLabel-root': { color: '#a9a9a9' },
+    '& .MuiInputLabel-root': { color: 'var(--color-text-secondary)' },
     '& .MuiOutlinedInput-root': {
-      '& fieldset': { borderColor: '#444' },
-      '&:hover fieldset': { borderColor: 'var(--color-accent-orange)' },
+      '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+      '&:hover fieldset': { borderColor: 'var(--color-accent-light-blue)' },
+      '&.Mui-focused fieldset': { borderColor: 'var(--color-accent-green)' },
     },
-    '& .MuiSvgIcon-root': { color: '#a9a9a9' },
+    '& .MuiSvgIcon-root': { color: 'var(--color-text-secondary)' },
   };
 
   return (
     <Paper sx={{ 
-      p: 2, 
-      background: 'var(--color-background-card-gradient)', 
-      color: 'var(--color-text-primary)',
+      p: { xs: 2, sm: 3 }, // Responsive padding
+      background: 'var(--color-background-card)', 
+      color: 'var(--color-text-light)',
       borderRadius: '16px',
-      border: '1px solid var(--color-border)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
       boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6" fontWeight="bold">Recent Swims</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FormControl sx={{ m: 1, minWidth: 120, ...formInputStyles }} size="small">
+    }} >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ background: 'var(--gradient-calm)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Recent Swims
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControl sx={{ minWidth: 140, ...formControlStyles }} size="small">
             <InputLabel id="sort-select-label">Sort By</InputLabel>
-            <Select
-              labelId="sort-select-label"
-              id="sort-select"
-              value={swimStore.sortOrder}
-              label="Sort By"
-              onChange={handleSortChange}
-            >
+            <Select labelId="sort-select-label" value={swimStore.sortOrder} label="Sort By" onChange={handleSortChange}>
               <MenuItem value={"date"}>Date & Time</MenuItem>
               <MenuItem value={"duration"}>Time Swum</MenuItem>
             </Select>
           </FormControl>
-          <IconButton onClick={handleColumnSelectorClick} sx={{ color: 'var(--color-text-secondary)' }}>
+          <IconButton onClick={handleColumnSelectorClick} sx={{ color: 'var(--color-text-secondary)', '&:hover': { color: 'var(--color-accent-green)' } }}>
             <SettingsIcon />
           </IconButton>
         </Box>
         <ColumnSelector anchorEl={anchorEl} onClose={handleColumnSelectorClose} />
       </Box>
+      {/* TableContainer enables horizontal scrolling on small screens */}
       <TableContainer sx={{ maxHeight: 440, overflowX: 'auto' }}>
         <Table stickyHeader aria-label="swim records table">
           <TableHead>
             <TableRow>
               {swimStore.visibleColumns.map((column) => (
                 <TableCell key={column} sx={{ 
-                  backgroundColor: 'rgba(0,0,0,0.3)', 
-                  color: 'var(--color-text-primary)',
+                  // Darker, distinct header background
+                  backgroundColor: '#101010', 
+                  color: 'var(--color-text-light)',
                   fontWeight: 'bold',
-                  borderBottom: '1px solid var(--color-border)'
-                }}>
+                  fontSize: '0.9rem',
+                  borderBottom: '2px solid var(--color-accent-blue-purple)',
+                  py: 1.5,
+                }} >
                   {columnDisplayNames[column] || column}
                 </TableCell>
               ))}
@@ -131,10 +128,20 @@ const SwimRecordsTable = observer(() => {
           </TableHead>
           <TableBody ref={tableBodyRef}>
             {swimStore.filteredSwims.map((record) => (
-              <TableRow key={record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 }, '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' } }}>
+              <TableRow 
+                key={record.id} 
+                sx={{ 
+                  '&:last-child td, &:last-child th': { border: 0 }, 
+                  transition: 'background-color 0.2s ease-in-out',
+                  '&:hover': { 
+                    // Vibrant hover effect for better user feedback
+                    backgroundColor: 'rgba(113, 126, 187, 0.2)',
+                  }
+                }}
+              >
                 {swimStore.visibleColumns.map((column) => (
-                  <TableCell key={column} sx={{ color: 'var(--color-text-secondary)', borderBottom: '1px solid var(--color-border)' }}>
-                    {String(getColumnValue(record, column) ?? '')}
+                  <TableCell key={column} sx={{ color: 'var(--color-text-secondary)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', py: 1.5 }}>
+                    {String(getColumnValue(record, column) ?? '-')}
                   </TableCell>
                 ))}
               </TableRow>
