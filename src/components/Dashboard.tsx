@@ -1,7 +1,7 @@
 
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { Box, Typography, Paper, Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, Paper, Grid } from '@mui/material';
 import SwimTimesChart from './SwimTimesChart';
 import TrendlineStats from './TrendlineStats';
 import SummaryCard from './SummaryCard';

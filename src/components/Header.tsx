@@ -5,7 +5,6 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import MenuIcon from '@mui/icons-material/Menu';
-import { useLocation } from 'react-router-dom';
 import { useState } from 'react';
 
 import FilterCard from './FilterCard';
@@ -16,7 +15,6 @@ const Header = observer(({ handleDrawerToggle }: { handleDrawerToggle: () => voi
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const theme = useTheme();
   // Using the same breakpoint as Layout for consistency
-  const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
   const handleColumnManagerClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);

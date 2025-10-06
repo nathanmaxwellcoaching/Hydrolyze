@@ -1,6 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
-import { Grid, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import { Grid, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material';
 
 const DashboardFilter = observer(() => {
   const handleFilterChange = (filterName: string, value: any) => {
@@ -49,11 +50,11 @@ const DashboardFilter = observer(() => {
         <FormControl fullWidth size="small">
           <InputLabel>Distance</InputLabel>
           <Select
-            value={swimStore.activeFilters.distance || 'Any'}
+            value={swimStore.activeFilters.distance ?? ''}
             label="Distance"
             onChange={(e: SelectChangeEvent<number>) => handleFilterChange('distance', e.target.value)}
           >
-            <MenuItem value="Any">Any</MenuItem>
+            <MenuItem value="">Any</MenuItem>
             {swimStore.uniqueDistances.map(distance => (
               <MenuItem key={distance} value={distance}>{distance}m</MenuItem>
             ))}
@@ -83,11 +84,11 @@ const DashboardFilter = observer(() => {
         <FormControl fullWidth size="small">
           <InputLabel>Pool Length</InputLabel>
           <Select
-            value={swimStore.activeFilters.poolLength || 'Any'}
+            value={swimStore.activeFilters.poolLength ?? ''}
             label="Pool Length"
             onChange={(e: SelectChangeEvent<number>) => handleFilterChange('poolLength', e.target.value)}
           >
-            <MenuItem value="Any">Any</MenuItem>
+            <MenuItem value="">Any</MenuItem>
             {swimStore.uniquePoolLengths.map(length => (
               <MenuItem key={length} value={length}>{length}m</MenuItem>
             ))}
