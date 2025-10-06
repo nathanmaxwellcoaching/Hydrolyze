@@ -26,7 +26,7 @@ export interface Swim {
   swimmerEmail: string;
   swimmer?: string;
   stroke: 'Freestyle' | 'Backstroke' | 'Breaststroke' | 'Butterfly';
-  gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'No Gear')[];
+  gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'NoGear')[];
   poolLength: 25 | 50;
   averageStrokeRate?: number;
   heartRate?: number;
@@ -67,7 +67,7 @@ export interface GoalTime {
   email: string;
   stroke: 'Freestyle' | 'Backstroke' | 'Breaststroke' | 'Butterfly';
   distance: number;
-  gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'No Gear')[];
+  gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'NoGear')[];
   time: number;
 }
 
@@ -329,7 +329,7 @@ class SwimStore {
       if (poolLength && swim.poolLength !== poolLength) return false;
       if (paceDistance && swim.paceDistance !== paceDistance) return false;
       if (gear && gear.length > 0) {
-        if (gear.includes('No Gear') && swim.gear.length === 0) {
+        if (gear.includes('NoGear') && swim.gear.length === 0) {
           return true;
         }
         if (!gear.some(g => swim.gear.includes(g as any))) return false;
@@ -344,7 +344,7 @@ class SwimStore {
     // Step 1: Group swims by a composite key to create dynamic series.
     // The key consists of swimmer, stroke, distance, gear, pool length, and pace distance.
     const groups = this.swimsForVelocityChart.reduce((acc, swim) => {
-      const gearStr = swim.gear && swim.gear.length > 0 ? swim.gear.join(',') : 'No Gear';
+      const gearStr = swim.gear && swim.gear.length > 0 ? swim.gear.join(',') : 'NoGear';
       // Create a unique key for each combination of swim attributes.
       const key = `${swim.swimmerEmail}-${swim.stroke}-${swim.distance}-${gearStr}-${swim.poolLength}-${swim.paceDistance}`;
       
@@ -411,7 +411,7 @@ class SwimStore {
       if (poolLength && swim.poolLength !== poolLength) return false;
       if (paceDistance && swim.paceDistance !== paceDistance) return false;
       if (gear && gear.length > 0) {
-        if (gear.includes('No Gear') && swim.gear.length === 0) {
+        if (gear.includes('NoGear') && swim.gear.length === 0) {
           return true;
         }
         if (!gear.some(g => swim.gear.includes(g as any))) return false;
@@ -477,7 +477,7 @@ class SwimStore {
   }
 
   get uniqueGear() {
-    return ['Fins', 'Paddles', 'Pull Buoy', 'Snorkel', 'No Gear'];
+    return ['Fins', 'Paddles', 'Pull Buoy', 'Snorkel', 'NoGear'];
   }
 
   get uniquePoolLengths() {

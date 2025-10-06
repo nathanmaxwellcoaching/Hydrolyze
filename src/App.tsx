@@ -25,6 +25,9 @@ const App = observer(() => {
             <Route path="manage-records" element={<ManageRecords />} />
             <Route path="manage-users" element={<ManageUsers />} />
           </Route>
+
+          {/* Silences React-Router warnings for static assets */}
+          <Route path="*" element={null} />
         </Route>
       </Route>
     </Routes>

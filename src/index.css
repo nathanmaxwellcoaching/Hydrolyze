@@ -13,36 +13,34 @@
 /* Using 'swap' ensures text is visible while the font loads, improving perceived performance. */
 
 /* Regular 400 */
+/* ----------------- LOCAL FONT IMPORT ----------------- */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Regular/static/JetBrainsMonoNerdFont-Regular.woff2') format('woff2');
+  src: url('/fonts/JetBrainsMonoNerdFont-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
-/* Italic 400 */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Italic/static/JetBrainsMonoNerdFont-Italic.woff2') format('woff2');
+  src: url('/fonts/JetBrainsMonoNerdFont-Italic.woff2') format('woff2');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 
-/* Medium 500 */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Medium/static/JetBrainsMonoNerdFont-Medium.woff2') format('woff2');
+  src: url('/fonts/JetBrainsMonoNerdFont-Medium.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
-/* Bold 700 */
 @font-face {
   font-family: 'JetBrains Mono Nerd Font';
-  src: url('https://cdn.jsdelivr.net/gh/ryanoasis/nerd-fonts@master/patched-fonts/JetBrainsMono/Bold/static/JetBrainsMonoNerdFont-Bold.woff2') format('woff2');
+  src: url('/fonts/JetBrainsMonoNerdFont-Bold.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
