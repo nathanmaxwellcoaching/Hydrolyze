@@ -1,0 +1,82 @@
+/* CalendarView.css */
+
+.calendar-container .react-calendar {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-background-card);
+  border-radius: 16px;
+  padding: 20px;
+  font-family: 'JetBrains Mono Nerd Font', monospace;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Navigation buttons */
+.react-calendar__navigation button {
+  color: var(--color-text-light);
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.react-calendar__navigation button:hover,
+.react-calendar__navigation button:focus {
+  background-color: #333;
+}
+
+/* Day of the week headers */
+.react-calendar__month-view__weekdays__weekday {
+  text-align: center;
+  color: var(--color-accent-light-blue);
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.75em;
+  padding-bottom: 10px;
+}
+
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+/* Individual day tiles */
+.react-calendar__tile {
+  background: none;
+  border: 2px solid transparent;
+  color: var(--color-text-secondary);
+  height: 100px; /* Give tiles more height */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 5px;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.react-calendar__tile:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+/* Today's date */
+.react-calendar__tile--now {
+  background-color: rgba(112, 166, 235, 0.1);
+  border: 1px solid var(--color-accent-light-blue);
+  border-radius: 8px;
+  color: var(--color-text-light);
+  font-weight: bold;
+}
+
+/* Selected date */
+.react-calendar__tile--active {
+  background-color: var(--color-cta-primary);
+  border-radius: 8px;
+  color: var(--color-text-light);
+  font-weight: bold;
+}
+
+.react-calendar__tile--active:hover {
+  background-color: var(--color-cta-primary-hover);
+}
+
+/* Dates outside of the current month */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #555;
+}
