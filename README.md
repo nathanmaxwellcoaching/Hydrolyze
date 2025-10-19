@@ -1,4 +1,4 @@
-# Swim App
+# Hydrolyze
 
 **Goal:** To provide a comprehensive platform for swimmers and coaches to log, view, and analyze swim data, fostering a collaborative environment for performance tracking and improvement.
 
