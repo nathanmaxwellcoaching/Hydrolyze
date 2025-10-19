@@ -7,7 +7,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { 
   Autocomplete, Box, Typography, TextField, Button, Select, MenuItem, 
   FormControl, InputLabel, OutlinedInput, Grid, useTheme, useMediaQuery, 
-  Dialog, DialogTitle, DialogContent, DialogActions, Tooltip
+  Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Checkbox, FormControlLabel
 } from '@mui/material';
 import moment from 'moment';
 
@@ -60,8 +60,9 @@ const NewRecordForm = observer(() => {
   const [goalTimeMap, setGoalTimeMap] = useState<Record<string, number>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<any>(null);
+  const [isRace, setIsRace] = useState(false);
 
-  const targetTimeReady = Boolean(formState.swimmerName && formState.targetPace && formState.distance);
+  const targetTimeReady = Boolean(formState.swimmerName && formState.distance && (isRace || formState.targetPace));
 
   const is_admin = swimStore.currentUser?.isAdmin;
 
@@ -112,26 +113,35 @@ const NewRecordForm = observer(() => {
   }, [formState.swimmerName, allUsers]);
 
   useEffect(() => {
+    if (isRace) {
+      setFormState(prev => ({ ...prev, targetPace: prev.distance, gear: ['NoGear'] }));
+    } else {
+      setFormState(prev => ({ ...prev, targetPace: undefined, gear: [] }));
+    }
+  }, [isRace, formState.distance]);
+
+  useEffect(() => {
     const { swimmerName, targetPace, distance, stroke, gear } = formState;
-    console.log("TargetTime useEffect dependencies:", { swimmerName, targetPace, distance, stroke, gear, goalTimeMapLength: Object.keys(goalTimeMap).length });
-    if (!swimmerName || !targetPace || !distance || Object.keys(goalTimeMap).length === 0) return;
+    const currentPace = isRace ? distance : targetPace;
+    console.log("TargetTime useEffect dependencies:", { swimmerName, currentPace, distance, stroke, gear, goalTimeMapLength: Object.keys(goalTimeMap).length });
+    if (!swimmerName || !currentPace || !distance || Object.keys(goalTimeMap).length === 0) return;
     const gearStr = gear.length ? gear.sort().join('-') : 'NoGear';
-    const keyWithPoolLength = `${targetPace}-${stroke}-${gearStr}-${formState.poolLength}`;
-    const keyWithoutPoolLength = `${targetPace}-${stroke}-${gearStr}`;
+    const keyWithPoolLength = `${currentPace}-${stroke}-${gearStr}-${formState.poolLength}`;
+    const keyWithoutPoolLength = `${currentPace}-${stroke}-${gearStr}`;
 
     let baseTime = goalTimeMap[keyWithPoolLength];
     if (baseTime == null) {
       baseTime = goalTimeMap[keyWithoutPoolLength];
     }
-    console.log("TargetTime calculation values:", { baseTime, distance, targetPace });
-    if (baseTime == null || baseTime === 0 || targetPace === 0) {
+    console.log("TargetTime calculation values:", { baseTime, distance, currentPace });
+    if (baseTime == null || baseTime === 0 || currentPace === 0) {
       setFormState(prev => ({ ...prev, targetTime: undefined }));
       return;
     }
-    const scaled = (distance / targetPace) * baseTime;
+    const scaled = (distance / currentPace) * baseTime;
     const final = Number(scaled.toFixed(1));
     setFormState(prev => ({ ...prev, targetTime: final }));
-  }, [formState.swimmerName, formState.targetPace, formState.distance, formState.stroke, formState.gear, goalTimeMap]);
+  }, [formState.swimmerName, formState.targetPace, formState.distance, formState.stroke, formState.gear, goalTimeMap, isRace]);
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
@@ -164,22 +174,25 @@ const NewRecordForm = observer(() => {
       return;
     }
 
-    for (let i = 0; i < durations.length; i++) {
-      const duration = durations[i];
-      const date = moment(formState.date).add(i * 10, 'minutes').format('YYYY-MM-DDTHH:mm');
-
-      const swimRecord: any = { 
-        ...formState, 
-        swimmerEmail: userRec.email, 
-        duration,
-        date
-      };
-      delete swimRecord.swimmerName;
-      if (swimRecord.targetPace !== undefined) {
-        swimRecord.paceDistance = String(swimRecord.targetPace);
-        delete swimRecord.targetPace;
-      }
-      if (Number.isNaN(swimRecord.averageStrokeRate)) swimRecord.averageStrokeRate = undefined;
+        for (let i = 0; i < durations.length; i++) {
+          const duration = durations[i];
+          const date = moment(formState.date).add(i * 10, 'minutes').format('YYYY-MM-DDTHH:mm');
+    
+          const swimRecord: any = {
+            ...formState,
+            swimmerEmail: userRec.email,
+            duration,
+            date,
+            isRace, // Add isRace to swimRecord
+          };
+          delete swimRecord.swimmerName;
+          if (isRace) {
+            swimRecord.paceDistance = String(swimRecord.distance); // Set paceDistance to distance if it's a race
+            delete swimRecord.targetPace;
+          } else if (swimRecord.targetPace !== undefined) {
+            swimRecord.paceDistance = String(swimRecord.targetPace);
+            delete swimRecord.targetPace;
+          }      if (Number.isNaN(swimRecord.averageStrokeRate)) swimRecord.averageStrokeRate = undefined;
       if (Number.isNaN(swimRecord.heartRate)) swimRecord.heartRate = undefined;
 
       try {
@@ -269,56 +282,67 @@ const NewRecordForm = observer(() => {
             renderInput={(params) => <TextField {...params} label="Swimmer Name" sx={formInputStyles} />}
           />
         </Grid>
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={<Checkbox checked={isRace} onChange={(e) => setIsRace(e.target.checked)} />}
+            label="Race"
+            sx={{ color: 'var(--color-text-primary)' }}
+          />
+        </Grid>
         <Grid item xs={12} sm={6}>
           <TextField fullWidth type="datetime-local" label="Date" name="date" value={formState.date} onChange={handleChange} InputLabelProps={{ shrink: true }} sx={formInputStyles} />
         </Grid>
         <Grid item xs={12} sm={6}>
           <TextField fullWidth type="number" label="Distance (m)" name="distance" value={formState.distance} onChange={handleChange} sx={formInputStyles} />
         </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth sx={formInputStyles}>
-            <InputLabel>Stroke</InputLabel>
-            <Select name="stroke" value={formState.stroke} onChange={handleChange}>
-              <MenuItem value="Freestyle">Freestyle</MenuItem>
-              <MenuItem value="Backstroke">Backstroke</MenuItem>
-              <MenuItem value="Breaststroke">Breaststroke</MenuItem>
-              <MenuItem value="Butterfly">Butterfly</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <TextField 
-            fullWidth 
-            type="text" 
-            label="Time Swum (seconds)" 
-            name="duration"
-            value={durationInput} 
-            onChange={handleDurationChange} 
-            sx={formInputStyles} 
-            helperText="Comma-separated for multiple records"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth sx={formInputStyles}>
-            <InputLabel>Target Pace</InputLabel>
-            <Select name="targetPace" value={formState.targetPace ?? ''} onChange={handleChange} label="Target Pace">
-              {goalDistances.map(d => <MenuItem key={d} value={d}>{d} m</MenuItem>) } 
-            </Select>
-          </FormControl>
-        </Grid>
-        {targetTimeReady && (
-          <Grid item xs={12} sm={6}>
-            <TextField fullWidth type="number" label="Target Time (seconds) – suggested" name="targetTime" value={formState.targetTime || ''} onChange={handleChange} sx={formInputStyles} />
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth sx={formInputStyles}>
+                    <InputLabel>Stroke</InputLabel>
+                    <Select name="stroke" value={formState.stroke} onChange={handleChange}>
+                      <MenuItem value="Freestyle">Freestyle</MenuItem>
+                      <MenuItem value="Backstroke">Backstroke</MenuItem>
+                      <MenuItem value="Breaststroke">Breaststroke</MenuItem>
+                      <MenuItem value="Butterfly">Butterfly</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField 
+                    fullWidth 
+                    type="text" 
+                    label="Time Swum (seconds)" 
+                    name="duration"
+                    value={durationInput} 
+                    onChange={handleDurationChange} 
+                    sx={formInputStyles} 
+                    helperText="Comma-separated for multiple records"
+                  />
+                </Grid>
+                {!isRace && (
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth sx={formInputStyles}>
+                      <InputLabel>Target Pace</InputLabel>
+                      <Select name="targetPace" value={formState.targetPace ?? ''} onChange={handleChange} label="Target Pace">
+                        {goalDistances.map(d => <MenuItem key={d} value={d}>{d} m</MenuItem>) }
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                )}
+                {targetTimeReady && (
+                  <Grid item xs={12} sm={6}>
+                    <TextField fullWidth type="number" label="Target Time (seconds) – suggested" name="targetTime" value={formState.targetTime || ''} onChange={handleChange} sx={formInputStyles} />
+                  </Grid>
+                )}
+                {!isRace && (
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth sx={formInputStyles}>
+                      <InputLabel>Gear Used</InputLabel>
+              <Select multiple name="gear" value={formState.gear} onChange={handleChange} input={<OutlinedInput label="Gear Used" />} renderValue={(s) => (s as string[]).join(', ')}>
+                {['Fins', 'Paddles', 'Pull Buoy', 'Snorkel', 'NoGear'].map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
+              </Select>
+            </FormControl>
           </Grid>
         )}
-        <Grid item xs={12} sm={6}>
-          <FormControl fullWidth sx={formInputStyles}>
-            <InputLabel>Gear Used</InputLabel>
-            <Select multiple name="gear" value={formState.gear} onChange={handleChange} input={<OutlinedInput label="Gear Used" />} renderValue={(s) => (s as string[]).join(', ')}>
-              {['Fins', 'Paddles', 'Pull Buoy', 'Snorkel', 'NoGear'].map(g => <MenuItem key={g} value={g}>{g}</MenuItem>)}
-            </Select>
-          </FormControl>
-        </Grid>
         <Grid item xs={12} sm={6}>
           <FormControl fullWidth sx={formInputStyles}>
             <InputLabel>Pool Length</InputLabel>
