@@ -16,10 +16,12 @@ The application collects the following data for each swim record:
 - Stroke (Freestyle, Backstroke, Breaststroke, Butterfly)
 - Time Swum (duration in seconds)
 - Target Time (can auto suggest if the user has goal times)
-- Gear Used (Fins, Paddles, Pull Buoy, Snorkel, NoGear)
+- Race (boolean, indicates if the record is a race. If true, target pace is assumed to be distance swum)
+- Gear Used (Fins, Paddles, Pull Buoy, Snorkel, NoGear - hidden if 'Race' is true)
 - Pool Length (25m or 50m)
 - Average Stroke Rate
 - Heart Rate (at the completion of the swim)
+- Notes (optional text field)
 - Swimmer Name (coach only)
 
 ## Key Features

@@ -39,7 +39,7 @@ const NewRecordForm = observer(() => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const [formState, setFormState] = useState<Omit<Swim, 'id' | 'swimmer'> & { swimmerName: string; targetPace?: number; swimmerEmail: string }>({
+  const [formState, setFormState] = useState<Omit<Swim, 'id' | 'swimmer'> & { swimmerName: string; targetPace?: number; swimmerEmail: string; notes?: string }>({
     date: moment().format('YYYY-MM-DDTHH:mm'),
     targetTime: undefined,
     duration: 0,
@@ -52,6 +52,7 @@ const NewRecordForm = observer(() => {
     heartRate: undefined,
     targetPace: undefined,
     swimmerEmail: '',
+    notes: '',
   });
   const [strokeRateInput, setStrokeRateInput] = useState<string>('');
   const [durationInput, setDurationInput] = useState<string>('');
@@ -61,6 +62,7 @@ const NewRecordForm = observer(() => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<any>(null);
   const [isRace, setIsRace] = useState(false);
+  const [showNotesField, setShowNotesField] = useState(false);
 
   const targetTimeReady = Boolean(formState.swimmerName && formState.distance && (isRace || formState.targetPace));
 
@@ -204,20 +206,6 @@ const NewRecordForm = observer(() => {
               ? (((swimRecord.duration - swimRecord.targetTime) / swimRecord.targetTime) * 100).toFixed(2)
               : null;
 
-          let slCompliance: { color: 'success' | 'warning' | 'error' | 'default', label: string } = { color: 'default', label: 'N/A' };
-          if (metrics.sl && swimRecord.poolLength && swimRecord.distance && swimRecord.averageStrokeRate && swimRecord.duration) {
-              const targetSPL = swimRecord.poolLength === 25 ? 20 : 42;
-              const actualSPL = swimRecord.averageStrokeRate * (swimRecord.duration / 60) / (swimRecord.distance / swimRecord.poolLength);
-              const diff = Math.abs(actualSPL - targetSPL);
-              if (diff <= 1) {
-                  slCompliance = { color: 'success', label: 'Excellent' };
-              } else if (diff <= 2) {
-                  slCompliance = { color: 'warning', label: 'Good' };
-              } else {
-                  slCompliance = { color: 'error', label: 'Needs Improvement' };
-              }
-          }
-
           let ieInterpretation = 'N/A';
           if (metrics.ie) {
               if (metrics.ie < 20) ieInterpretation = "Low effort – Fresh!";
@@ -228,7 +216,6 @@ const NewRecordForm = observer(() => {
           setModalData({
               metrics,
               achievementRate,
-              slCompliance,
               ieInterpretation,
           });
           setModalOpen(true);
@@ -286,6 +273,13 @@ const NewRecordForm = observer(() => {
           <FormControlLabel
             control={<Checkbox checked={isRace} onChange={(e) => setIsRace(e.target.checked)} />}
             label="Race"
+            sx={{ color: 'var(--color-text-primary)' }}
+          />
+        </Grid>
+        <Grid item xs={12}>
+          <FormControlLabel
+            control={<Checkbox checked={showNotesField} onChange={(e) => setShowNotesField(e.target.checked)} />}
+            label="Add Notes"
             sx={{ color: 'var(--color-text-primary)' }}
           />
         </Grid>
@@ -358,6 +352,20 @@ const NewRecordForm = observer(() => {
         <Grid item xs={12} sm={6}>
           <TextField fullWidth type="number" label="Heart Rate (HR)" name="heartRate" value={formState.heartRate || ''} onChange={handleChange} sx={formInputStyles} />
         </Grid>
+        {showNotesField && (
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Notes"
+              name="notes"
+              value={formState.notes}
+              onChange={handleChange}
+              multiline
+              rows={3}
+              sx={formInputStyles}
+            />
+          </Grid>
+        )}
         <Grid item xs={12}>
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, p: 1.5, backgroundColor: 'var(--color-cta-primary)', color: 'var(--color-text-light)', fontWeight: 'bold', borderRadius: '12px', transition: 'all 0.3s ease', '&:hover': { backgroundColor: 'var(--color-cta-primary-hover)', transform: 'scale(1.02)', boxShadow: '0 0 20px rgba(10, 78, 178, 0.7)' } }}>
             Add Record
