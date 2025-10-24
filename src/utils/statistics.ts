@@ -46,3 +46,10 @@ export const correlationCoefficient = (data: number[][]): number => {
 
   return denominator === 0 ? 0 : numerator / denominator;
 };
+
+export const calculateStdDev = (values: number[]): number => {
+  if (values.length < 2) return 0;
+  const mean = calculateMean(values);
+  const variance = values.reduce((acc, val) => acc + (val - mean) ** 2, 0) / (values.length - 1);
+  return Math.sqrt(variance);
+};

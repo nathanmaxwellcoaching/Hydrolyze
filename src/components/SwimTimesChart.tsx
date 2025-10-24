@@ -67,33 +67,11 @@ const SwimTimesChart = observer(() => {
   const [yMetric, setYMetric] = useState<'SI' | 'IE'>('SI');
   const [xAxis, setXAxis] = useState<'Date' | 'Velocity'>('Date');
   const [showTrendlines, setShowTrendlines] = useState(false);
+  const [showStdDev, setShowStdDev] = useState(false);
 
   // Memoize data preparations
   const timeSeries = useMemo(() => groupSwimsIntoSeries(filteredSwims), [filteredSwims]);
   const dynamicSeries = useMemo(() => prepareChartData(filteredSwims, yMetric, xAxis), [filteredSwims, yMetric, xAxis]);
-
-  const augmentedTimeSeries = useMemo(() => {
-    if (!showTrendlines) return timeSeries;
-    return timeSeries.reduce((acc: any[], s) => {
-      acc.push({ ...s, type: 'line' });
-      if (s.data.length >= 2) {
-        const data = [...s.data].sort((a, b) => a[0] - b[0]);
-        const first = data[0][0];
-        const scale = 1000 * 60 * 60 * 24;
-        const reg = data.map(d => [(d[0] - first) / scale, d[1]]);
-        const { m, b } = linearRegression(reg);
-        const last = data[data.length - 1][0];
-        acc.push({
-          name: `${s.name} Trend`,
-          data: [[first, b], [last, m * ((last - first) / scale) + b]],
-          type: 'line',
-          stroke: { dashArray: 5 },
-          color: 'var(--color-accent-yellow)'
-        });
-      }
-      return acc;
-    }, []);
-  }, [timeSeries, showTrendlines]);
 
   const timeTrendStats = useMemo(() => {
     if (!showTrendlines) return [];
@@ -107,6 +85,64 @@ const SwimTimesChart = observer(() => {
       return { name: s.name, rSquared: (r * r).toFixed(2) };
     }).filter((stat): stat is NonNullable<typeof stat> => stat !== null);
   }, [timeSeries, showTrendlines]);
+
+  const stdDevSeries = useMemo(() => {
+    if (!showStdDev || !swimStore.averageAndSd) return [];
+
+    const { average, standardDeviation } = swimStore.averageAndSd;
+    const upper = average + 2 * standardDeviation;
+    const lower = average - 2 * standardDeviation;
+
+    const allDates = timeSeries.flatMap(s => s.data.map(d => d[0]));
+    if (allDates.length === 0) return [];
+
+    const firstDate = Math.min(...allDates);
+    const lastDate = Math.max(...allDates);
+
+    return [
+      {
+        name: `+2 SD`,
+        data: [[firstDate, upper], [lastDate, upper]],
+        type: 'line',
+        stroke: { dashArray: 5 },
+        color: '#ff0000'
+      },
+      {
+        name: `-2 SD`,
+        data: [[firstDate, lower], [lastDate, lower]],
+        type: 'line',
+        stroke: { dashArray: 5 },
+        color: '#ff0000'
+      }
+    ];
+  }, [timeSeries, showStdDev, swimStore.averageAndSd]);
+
+  const augmentedTimeSeries = useMemo(() => {
+    const series: any[] = [...timeSeries];
+    if (showTrendlines) {
+      const trendlines = timeSeries.flatMap(s => {
+        if (s.data.length < 2) return [];
+        const data = [...s.data].sort((a, b) => a[0] - b[0]);
+        const first = data[0][0];
+        const scale = 1000 * 60 * 60 * 24;
+        const reg = data.map(d => [(d[0] - first) / scale, d[1]]);
+        const { m, b } = linearRegression(reg);
+        const last = data[data.length - 1][0];
+        return {
+          name: `${s.name} Trend`,
+          data: [[first, b], [last, m * ((last - first) / scale) + b]],
+          type: 'line',
+          stroke: { dashArray: 5 },
+          color: 'var(--color-accent-yellow)'
+        };
+      });
+      series.push(...trendlines);
+    }
+    if (showStdDev) {
+      series.push(...stdDevSeries);
+    }
+    return series;
+  }, [timeSeries, showTrendlines, showStdDev, stdDevSeries]);
 
   const augmentedDynamicSeries = useMemo(() => {
     if (!showTrendlines) return dynamicSeries;
@@ -290,6 +326,16 @@ const SwimTimesChart = observer(() => {
                         checked={showTrendlines}
                         onChange={(e) => setShowTrendlines(e.target.checked)}
                         className="form-checkbox h-4 w-4 text-yellow-600 bg-gray-700 border-gray-600 rounded focus:ring-yellow-500"
+                    />
+                </div>
+                <div className="flex items-center space-x-2">
+                    <label htmlFor="std-dev-select" className="text-sm text-gray-300">Show 2x Standard Deviation</label>
+                    <input
+                        id="std-dev-select"
+                        type="checkbox"
+                        checked={showStdDev}
+                        onChange={(e) => setShowStdDev(e.target.checked)}
+                        className="form-checkbox h-4 w-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
                     />
                 </div>
             </div>
