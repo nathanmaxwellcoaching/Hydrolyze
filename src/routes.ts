@@ -28,5 +28,9 @@ export const routes = [
   {
     path: 'coaches',
     component: 'CoachesTab',
+  },
+  {
+    path: 'achievement-rate',
+    component: 'AchievementRatePage',
   }
 ];

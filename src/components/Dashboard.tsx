@@ -11,6 +11,7 @@ import VelocityDistanceChart from './VelocityDistanceChart';
 import HorizontalProportionBar from './HorizontalProportionBar';
 import { useEffect, useRef } from 'react';
 import anime from 'animejs';
+import { Link } from 'react-router-dom';
 
 // Helper function remains unchanged as it deals with logic, not presentation.
 const getAvgPercentDiff = () => {
@@ -88,18 +89,20 @@ const Dashboard = observer(() => {
             </Paper>
 
             {/* Achievement Rate Card */}
-            <Paper elevation={3} className="dashboard-item" sx={{ ...cardStyles, borderRadius: 4, p: 2 }}>
-              <Typography variant="subtitle1" color="text.secondary">Achievement Rate</Typography>
-              <Typography variant="h6" fontWeight="bold" sx={{ color: 'success.main' }}>
-                {(() => { const avg = getAvgPercentDiff(); return avg !== null ? `Mean Δ ${avg.toFixed(2)}%` : 'N/A'; })()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">vs. Target Time</Typography>
-              {swimStore.achievementZoneDistribution && swimStore.achievementZoneDistribution.length > 0 ? (
-                <HorizontalProportionBar data={swimStore.achievementZoneDistribution} />
-              ) : (
-                <Typography variant="body2" sx={{ color: 'var(--color-text-secondary)' }}>No target times set</Typography>
-              )}
-            </Paper>
+            <Link to="/achievement-rate" style={{ textDecoration: 'none' }}>
+              <Paper elevation={3} className="dashboard-item" sx={{ ...cardStyles, borderRadius: 4, p: 2 }}>
+                <Typography variant="subtitle1" color="text.secondary">Achievement Rate</Typography>
+                <Typography variant="h6" fontWeight="bold" sx={{ color: 'success.main' }}>
+                  {(() => { const avg = getAvgPercentDiff(); return avg !== null ? `Mean Δ ${avg.toFixed(2)}%` : 'N/A'; })()}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">vs. Target Time</Typography>
+                {swimStore.achievementZoneDistribution && swimStore.achievementZoneDistribution.length > 0 ? (
+                  <HorizontalProportionBar data={swimStore.achievementZoneDistribution} />
+                ) : (
+                  <Typography variant="body2" sx={{ color: 'var(--color-text-secondary)' }}>No target times set</Typography>
+                )}
+              </Paper>
+            </Link>
 
             {/* Average Time & SD Card (Combined for mobile) */}
             <Paper elevation={3} className="dashboard-item" sx={{ ...cardStyles, borderRadius: 4, p: 2 }}>
@@ -190,18 +193,20 @@ const Dashboard = observer(() => {
               <SummaryCard title="Personal Best" value={swimStore.personalBests ? `${swimStore.personalBests.duration}s` : 'N/A'} subValue={swimStore.personalBests ? new Date(swimStore.personalBests.date).toLocaleDateString() : '-'} />
             </Grid>
             <Grid item xs={12} sm={6} lg={3} className="dashboard-item">
-              <SummaryCard
-                title="Achievement Rate"
-                value={(() => { const avg = getAvgPercentDiff(); return avg !== null ? `Mean Δ ${avg.toFixed(2)}%` : 'N/A'; })()}
-                subValue="vs. Target Time"
-                customContent={
-                  swimStore.achievementZoneDistribution && swimStore.achievementZoneDistribution.length > 0 ? (
-                    <HorizontalProportionBar data={swimStore.achievementZoneDistribution} />
-                  ) : (
-                    <Typography variant="body2" sx={{color: 'var(--color-text-secondary)'}}>No target times set</Typography>
-                  )
-                }
-              />
+              <Link to="/achievement-rate" style={{ textDecoration: 'none' }}>
+                <SummaryCard
+                  title="Achievement Rate"
+                  value={(() => { const avg = getAvgPercentDiff(); return avg !== null ? `Mean Δ ${avg.toFixed(2)}%` : 'N/A'; })()}
+                  subValue="vs. Target Time"
+                  customContent={
+                    swimStore.achievementZoneDistribution && swimStore.achievementZoneDistribution.length > 0 ? (
+                      <HorizontalProportionBar data={swimStore.achievementZoneDistribution} />
+                    ) : (
+                      <Typography variant="body2" sx={{color: 'var(--color-text-secondary)'}}>No target times set</Typography>
+                    )
+                  }
+                />
+              </Link>
             </Grid>
             <Grid item xs={12} sm={6} lg={3} className="dashboard-item">
               <SummaryCard title="Avg Time Swum (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.average : 'N/A'} subValue={swimStore.averageAndSd ? `Based on ${swimStore.averageAndSd.swimCount} swims` : '-'} />

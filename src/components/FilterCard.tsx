@@ -92,7 +92,9 @@ const FilterCard = observer(() => {
                 onChange={(e) => swimStore.applyFilters({ paceDistance: e.target.value === 'Any' ? null : e.target.value })}
             >
                 <MenuItem value="Any">Any</MenuItem>
-                {swimStore.uniquePaceDistances.map(pd => (
+                {(swimStore.activeFilters.distance
+                  ? swimStore.uniquePaceDistances.filter(pd => pd && parseInt(pd, 10) >= swimStore.activeFilters.distance!)
+                  : swimStore.uniquePaceDistances).map(pd => (
                     <MenuItem key={pd} value={pd}>{pd}m</MenuItem>
                 ))}
             </Select>

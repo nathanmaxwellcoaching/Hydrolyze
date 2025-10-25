@@ -15,6 +15,7 @@ import RegistrationScreen from './components/RegistrationScreen';
 import CalendarView from './components/CalendarView';
 import SwimmersTab from './components/Coach/SwimmersTab';
 import CoachesTab from './components/Swimmer/CoachesTab';
+import AchievementRatePage from './components/AchievementRatePage';
 
 const App = observer(() => {
   return (
@@ -31,6 +32,7 @@ const App = observer(() => {
           <Route path="calendar" element={<CalendarView />} />
           <Route path="swimmers" element={<SwimmersTab />} />
           <Route path="coaches" element={<CoachesTab />} />
+          <Route path="achievement-rate" element={<AchievementRatePage />} />
           <Route element={<AdminRoute />}>
             <Route path="manage-records" element={<ManageRecords />} />
             <Route path="manage-users" element={<ManageUsers />} />
