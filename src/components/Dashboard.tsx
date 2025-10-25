@@ -105,6 +105,7 @@ const Dashboard = observer(() => {
             </Link>
 
             {/* Average Time & SD Card (Combined for mobile) */}
+            <Link to="/standard-deviation" style={{ textDecoration: 'none' }}>
             <Paper elevation={3} className="dashboard-item" sx={{ ...cardStyles, borderRadius: 4, p: 2 }}>
               <Typography variant="subtitle1" color="text.secondary">Average Time & SD (s)</Typography>
               <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 1 }}>
@@ -128,6 +129,7 @@ const Dashboard = observer(() => {
                 {sdSubValue}
               </Typography>
             </Paper>
+            </Link>
           </Stack>
 
           {/* Section 2: Visualizations */}
@@ -140,6 +142,14 @@ const Dashboard = observer(() => {
                   </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
+                  {swimStore.outlierSwims.length > 0 && (
+                    <Paper sx={{ p: 2, mb: 2, border: '2px solid red' }}>
+                      <Typography variant="h6" color="error">Action Required</Typography>
+                      <Typography color="error">
+                        The last repetition/lap falls outside the historical ±2 SD threshold for {swimStore.filterContext}. Immediate intervention or focused post-session evaluation is strongly recommended.
+                      </Typography>
+                    </Paper>
+                  )}
                   {/* Chart will automatically be responsive due to parent width and ApexCharts config */}
                   <SwimTimesChart />
                   {/* TODO: Add responsive options to SwimTimesChart component: sparkline: true, width='100%', height='35vh' */}
@@ -212,7 +222,9 @@ const Dashboard = observer(() => {
               <SummaryCard title="Avg Time Swum (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.average : 'N/A'} subValue={swimStore.averageAndSd ? `Based on ${swimStore.averageAndSd.swimCount} swims` : '-'} />
             </Grid>
             <Grid item xs={12} sm={6} lg={3} className="dashboard-item">
-              <SummaryCard title="Time Swum SD (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.standardDeviation : 'N/A'} subValue={sdSubValue} />
+              <Link to="/standard-deviation" style={{ textDecoration: 'none' }}>
+                <SummaryCard title="Time Swum SD (s)" value={swimStore.averageAndSd ? swimStore.averageAndSd.standardDeviation : 'N/A'} subValue={sdSubValue} />
+              </Link>
             </Grid>
           </Grid>
 
@@ -224,6 +236,14 @@ const Dashboard = observer(() => {
                   <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ background: 'var(--gradient-energetic)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                     {swimStore.filterContext}
                   </Typography>
+                  {swimStore.outlierSwims.length > 0 && (
+                    <Paper sx={{ p: 2, mb: 2, border: '2px solid red' }}>
+                      <Typography variant="h6" color="error">Action Required</Typography>
+                      <Typography color="error">
+                        The last repetition/lap falls outside the historical ±2 SD threshold for {swimStore.filterContext}. Immediate intervention or focused post-session evaluation is strongly recommended.
+                      </Typography>
+                    </Paper>
+                  )}
                   <SwimTimesChart />
                 </Paper>
               </Grid>

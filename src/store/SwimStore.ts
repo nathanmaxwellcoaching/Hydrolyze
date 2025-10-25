@@ -3,6 +3,7 @@ import { db, auth } from "../firebase-config";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "firebase/auth";
 import axios from 'axios';
+import { calculateMean, calculateStdDev } from "../utils/statistics";
 
 export interface User {
   id: string; // Firebase UID
@@ -124,6 +125,7 @@ class SwimStore {
   strokeDistributionMetric: 'records' | 'distance' = 'records';
   sortOrder: 'date' | 'duration' = 'date';
   visibleGoalTimeColumns: (keyof GoalTime)[] = ['swimmerName', 'stroke', 'distance', 'gear', 'time'];
+  sdChartYAxis: 'si' | 'velocity' | 'ie' | 'averageStrokeRate' | 'sl' | 'duration' = 'velocity';
 
   // State for the global record detail modal
   isRecordDetailModalOpen = false;
@@ -140,6 +142,8 @@ class SwimStore {
       averageAndSd: computed,
       velocityDistanceData: computed,
       isAuthenticated: computed,
+      outlierSwims: computed,
+      sdChartData: computed,
     });
     this.setupFirebaseAuthObserver();
     this.loadSwims(); // Swims can be loaded independently of user auth
@@ -378,6 +382,10 @@ class SwimStore {
     this.sortOrder = order;
   }
 
+  setSdChartYAxis(metric: 'si' | 'velocity' | 'ie' | 'averageStrokeRate' | 'sl' | 'duration') {
+    this.sdChartYAxis = metric;
+  }
+
   setVisibleGoalTimeColumns(columns: (keyof GoalTime)[]) {
     this.visibleGoalTimeColumns = columns;
   }
@@ -602,6 +610,56 @@ class SwimStore {
       return null;
     }
     return this.filteredSwims.reduce((prev, current) => (prev.duration < current.duration) ? prev : current);
+  }
+
+  get outlierSwims() {
+    if (this.filteredSwims.length < 2) {
+      return [];
+    }
+
+    const durations = this.filteredSwims.map(swim => swim.duration);
+    const lastSwim = this.filteredSwims[0];
+    const historicalDurations = durations.slice(1);
+
+    const mean = calculateMean(historicalDurations);
+    const stdDev = calculateStdDev(historicalDurations);
+
+    const upperThreshold = mean + 2 * stdDev;
+    const lowerThreshold = mean - 2 * stdDev;
+
+    if (lastSwim.duration > upperThreshold || lastSwim.duration < lowerThreshold) {
+      return [lastSwim];
+    }
+
+    return [];
+  }
+
+  get sdChartData() {
+    const metric = this.sdChartYAxis;
+    const swims = this.filteredSwims.filter(s => s[metric] !== undefined && s[metric] !== null);
+
+    if (swims.length === 0) {
+      return null;
+    }
+
+    const values = swims.map(s => s[metric] as number);
+    const mean = calculateMean(values);
+    const stdDev = calculateStdDev(values);
+
+    const upper2SD = mean + 2 * stdDev;
+    const lower2SD = mean - 2 * stdDev;
+
+    return {
+      series: [
+        {
+          name: metric,
+          data: swims.map(s => [new Date(s.date).getTime(), s[metric]]),
+        },
+      ],
+      mean,
+      upper2SD,
+      lower2SD,
+    };
   }
 
   get achievementRates() {
