@@ -7,8 +7,17 @@ import { darkTheme } from './themes/DynamicStyles';
 import App from './App';
 import './index.css';
 
-
-
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js') // vite-plugin-pwa generates sw.js by default
+      .then(registration => {
+        console.log('SW registered: ', registration);
+      })
+      .catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
