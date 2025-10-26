@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { observer } from 'mobx-react-lite';
-import { auth } from '../firebase-config';
-import swimStore, { type StravaSession } from '../store/SwimStore';
+import React, { useState, useEffect } from 'react';
 import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Box, IconButton, Popover, FormGroup, MenuItem, Checkbox, ListItemText } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import StravaSwimChart from './StravaSwimChart';
+import HrZoneDonutChart from './HrZoneDonutChart';
+import { auth } from '../firebase-config';
+import axios from 'axios';
+import swimStore from '../store/SwimStore';
+import type { StravaSession } from '../store/SwimStore';
 
 const columnDisplayNames: { [key: string]: string } = {
   start_date: 'Date',
@@ -24,6 +26,7 @@ const StravaPage = observer(() => {
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [visibleColumns, setVisibleColumns] = useState<(keyof StravaSession)[]>(['distance', 'start_date']);
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -83,9 +86,9 @@ const StravaPage = observer(() => {
     );
 
   return (
-    <Paper sx={{ 
+    <Paper sx={{
       p: { xs: 2, sm: 3 },
-      background: 'var(--color-background-card)', 
+      background: 'var(--color-background-card)',
       color: 'var(--color-text-light)',
       borderRadius: '16px',
       border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -95,6 +98,7 @@ const StravaPage = observer(() => {
         <Typography variant="h6" fontWeight="bold" sx={{ background: 'var(--gradient-calm)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           Strava Swims
         </Typography>
+
         <IconButton onClick={handleColumnSelectorClick} sx={{ color: 'var(--color-text-secondary)', '&:hover': { color: 'var(--color-accent-green)' } }}>
           <SettingsIcon />
         </IconButton>
@@ -128,6 +132,14 @@ const StravaPage = observer(() => {
         </Popover>
       </Box>
       <StravaSwimChart swims={swims} />
+      {swimStore.selectedRecordForDetail && 'hrZoneTimes' in swimStore.selectedRecordForDetail && swimStore.selectedRecordForDetail.hrZoneTimes && swimStore.userMaxHr && (
+        <Box sx={{ mt: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ background: 'var(--gradient-calm)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 2 }}>
+            HR Zone Distribution
+          </Typography>
+          <HrZoneDonutChart data={swimStore.selectedRecordForDetail.hrZoneTimes} />
+        </Box>
+      )}
       <TableContainer sx={{ maxHeight: 440, overflowX: 'auto' }}>
         <Table stickyHeader aria-label="strava swim records table">
           <TableHead>
@@ -141,18 +153,18 @@ const StravaPage = observer(() => {
           </TableHead>
           <TableBody>
             {swims.map((swim) => (
-              <TableRow 
-                key={swim.id} 
+              <TableRow
+                key={swim.id}
                 onClick={() => swimStore.openRecordDetailModal(swim)}
-                sx={{ 
-                  '&:last-child td, &:last-child th': { border: 0 }, 
-                  transition: 'background-color 0.2s ease-in-out', 
-                  '&:hover': { backgroundColor: 'rgba(113, 126, 187, 0.2)', cursor: 'pointer' } 
+                sx={{
+                  '&:last-child td, &:last-child th': { border: 0 },
+                  transition: 'background-color 0.2s ease-in-out',
+                  '&:hover': { backgroundColor: 'rgba(113, 126, 187, 0.2)', cursor: 'pointer' }
                 }}
               >
                 {visibleColumns.map((column) => (
                   <TableCell key={column} sx={{ color: 'var(--color-text-secondary)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', py: 1.5 }}>
-                    {column === 'start_date' ? new Date(swim[column]).toLocaleDateString() : swim[column]}
+                    {column === 'start_date' ? new Date(swim[column] as string).toLocaleDateString() : swim[column] as string | number}
                   </TableCell>
                 ))}
               </TableRow>

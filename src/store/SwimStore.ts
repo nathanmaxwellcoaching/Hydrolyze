@@ -3,7 +3,7 @@ import { db, auth } from "../firebase-config";
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "firebase/auth";
 import axios from 'axios';
-import { calculateMean, calculateStdDev } from "../utils/statistics";
+import { calculateMean, calculateStdDev, calculateHrZoneTimes, calculateAge } from "../utils/statistics";
 
 export interface User {
   id: string; // Firebase UID
@@ -15,6 +15,15 @@ export interface User {
   stravaClientSecret?: string;
   swimmers?: string[]; // for coaches
   coaches?: string[]; // for swimmers
+  userMaxHr?: number; // User's maximum heart rate
+  dob?: string; // Date of birth in YYYY-MM-DD format
+}
+
+export interface HrZoneDefinition {
+  name: string;
+  min: number; // as a percentage of max HR (e.g., 0.5 for 50%)
+  max: number; // as a percentage of max HR (e.g., 0.6 for 60%)
+  color: string;
 }
 
 export interface StravaSession {
@@ -27,6 +36,7 @@ export interface StravaSession {
   average_heartrate?: number;
   max_heartrate?: number;
   swimmerEmail: string;
+  hrZoneTimes?: { name: string; value: number; color: string }[];
 }
 
 export interface Swim {
@@ -127,6 +137,16 @@ class SwimStore {
   visibleGoalTimeColumns: (keyof GoalTime)[] = ['swimmerName', 'stroke', 'distance', 'gear', 'time'];
   sdChartYAxis: 'si' | 'velocity' | 'ie' | 'averageStrokeRate' | 'sl' | 'duration' = 'velocity';
 
+  // HR Zone related state
+  userMaxHr: number | null = null;
+  hrZoneDefinitions: HrZoneDefinition[] = [
+    { name: 'Zone 1 (Very Light)', min: 0.50, max: 0.60, color: '#a8e063' },
+    { name: 'Zone 2 (Light)', min: 0.60, max: 0.70, color: '#56ab2f' },
+    { name: 'Zone 3 (Moderate)', min: 0.70, max: 0.80, color: '#fbd786' },
+    { name: 'Zone 4 (Hard)', min: 0.80, max: 0.90, color: '#f7797d' },
+    { name: 'Zone 5 (Maximum)', min: 0.90, max: 1.00, color: '#c62828' },
+  ];
+
   // State for the global record detail modal
   isRecordDetailModalOpen = false;
   selectedRecordForDetail: Swim | StravaSession | null = null;
@@ -146,8 +166,11 @@ class SwimStore {
       sdChartData: computed,
     });
     this.setupFirebaseAuthObserver();
-    this.loadSwims(); // Swims can be loaded independently of user auth
-    this.loadStravaSessions();
+    // Call loadStravaSessions after auth observer has potentially set userMaxHr
+    auth.onAuthStateChanged(() => {
+      this.loadSwims();
+      this.loadStravaSessions();
+    });
   }
 
   openRecordDetailModal = (record: Swim | StravaSession) => {
@@ -160,12 +183,75 @@ class SwimStore {
     this.selectedRecordForDetail = null;
   };
 
+  private async getStravaAccessToken(): Promise<string | null> {
+    if (!this.currentUser || !this.currentUser.stravaClientId || !this.currentUser.stravaClientSecret) {
+      console.warn("Current user or Strava credentials not available.");
+      return null;
+    }
+
+    // Fallback: If userMaxHr is not set, try to calculate from dob
+    if (this.userMaxHr === null && this.currentUser.dob) {
+      const age = calculateAge(this.currentUser.dob);
+      if (age !== null) {
+        this.userMaxHr = 220 - age;
+        // Do not persist this calculated value unless user explicitly saves it
+      }
+    }
+
+    if (this.userMaxHr === null) {
+      console.warn("Cannot fetch Strava HR data: user Max HR is not set and cannot be calculated from DOB.");
+      return null;
+    }
+
+    try {
+      // Assuming a backend endpoint to handle Strava OAuth token refresh/exchange
+      const response = await axios.post('http://localhost:10000/strava/token', {
+        clientId: this.currentUser.stravaClientId,
+        clientSecret: this.currentUser.stravaClientSecret,
+        // Potentially include a refresh token if stored, or handle initial auth flow
+      });
+      return response.data.access_token;
+    } catch (error) {
+      console.error("Failed to get Strava access token:", error);
+      return null;
+    }
+  }
+
   async loadStravaSessions() {
     const sessionsCollection = collection(db, "strava_sessions");
     const sessionSnapshot = await getDocs(sessionsCollection);
-    const sessionList = sessionSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StravaSession));
+    let sessionList = sessionSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StravaSession));
+
+    const enrichedSessions: StravaSession[] = [];
+    for (const session of sessionList) {
+      if (this.userMaxHr && this.currentUser?.stravaClientId && this.currentUser?.stravaClientSecret) {
+        try {
+          const accessToken = await this.getStravaAccessToken();
+          if (accessToken) {
+            const streamsResponse = await axios.get(
+              `https://www.strava.com/api/v3/activities/${session.id}/streams?keys=heartrate&key_by_type=true`,
+              {
+                headers: { Authorization: `Bearer ${accessToken}` },
+              }
+            );
+
+            const heartrateStream = streamsResponse.data.heartrate?.data;
+            const hrZoneTimes = calculateHrZoneTimes(heartrateStream, this.userMaxHr, this.hrZoneDefinitions);
+            enrichedSessions.push({ ...session, hrZoneTimes });
+          } else {
+            enrichedSessions.push(session);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch Strava streams for activity ${session.id}:`, error);
+          enrichedSessions.push(session);
+        }
+      } else {
+        enrichedSessions.push(session);
+      }
+    }
+
     runInAction(() => {
-      this.stravaSessions = sessionList;
+      this.stravaSessions = enrichedSessions;
     });
   }
 
@@ -188,6 +274,16 @@ class SwimStore {
           }
           runInAction(() => {
             this.currentUser = user;
+            if (user.userMaxHr) {
+              this.userMaxHr = user.userMaxHr;
+            } else if (user.dob) {
+              const age = calculateAge(user.dob);
+              if (age !== null) {
+                this.userMaxHr = 220 - age;
+              }
+            } else {
+              this.userMaxHr = null;
+            }
             if (users.length > 0) {
               this.users = users;
             }
@@ -388,6 +484,13 @@ class SwimStore {
 
   setVisibleGoalTimeColumns(columns: (keyof GoalTime)[]) {
     this.visibleGoalTimeColumns = columns;
+  }
+
+  setUserMaxHr(maxHr: number | null) {
+    this.userMaxHr = maxHr;
+    if (this.currentUser && maxHr !== null) {
+      this.updateUser(this.currentUser.id, { userMaxHr: maxHr });
+    }
   }
 
     applyGoalTimeFilters(filters: any) {

@@ -30,7 +30,7 @@ const groupSwimsIntoSeries = (swims: Swim[]) => {
 
 // New versatile function to prepare data for the second chart
 const prepareChartData = (swims: Swim[], yMetric: 'SI' | 'IE', xAxis: 'Date' | 'Velocity') => {
-    const groups: Record<string, { name: string; data: [number, number][] }> = {};
+    const groups: Record<string, { name: string; data: [number, number, Swim][] }> = {};
 
     swims.forEach(swim => {
         const yValue = yMetric === 'SI' ? swim.si : swim.ie;
@@ -49,7 +49,7 @@ const prepareChartData = (swims: Swim[], yMetric: 'SI' | 'IE', xAxis: 'Date' | '
             if (!groups[seriesKey]) {
                 groups[seriesKey] = { name: seriesKey, data: [] };
             }
-            groups[seriesKey].data.push([xValue, yValue]);
+            groups[seriesKey].data.push([xValue, yValue, swim]);
         }
     });
 
@@ -241,7 +241,21 @@ const SwimTimesChart = observer(() => {
 
   const dynamicChartOptions: ApexOptions = {
     ...commonOptions,
-    chart: { ...commonOptions.chart, id: 'dynamic-chart' },
+    chart: {
+      ...commonOptions.chart,
+      id: 'dynamic-chart',
+      events: {
+        dataPointSelection: (event, chartContext, config) => {
+          const dataPointIndex = config.dataPointIndex;
+          const seriesIndex = config.seriesIndex;
+          const selectedSeries = augmentedDynamicSeries[seriesIndex];
+          if (selectedSeries && selectedSeries.data && selectedSeries.data[dataPointIndex]) {
+            const swim = selectedSeries.data[dataPointIndex][2] as Swim;
+            swimStore.openRecordDetailModal(swim);
+          }
+        },
+      },
+    },
     title: {
       text: dynamicTitle,
       align: 'center',
@@ -266,15 +280,16 @@ const SwimTimesChart = observer(() => {
         axisTicks: { show: false },
     },
     yaxis: {
-        title: { text: yMetric === 'SI' ? 'Swim Index (SI m²/stroke)' : 'Index of Efficiency (IE)', style: { color: 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 500 } },
+        title: { text: yMetric === 'SI' ? 'Swim Index (SI m²/stroke)' : 'Efficiency Index (IE)', style: { color: 'var(--color-text-secondary)', fontSize: '12px', fontWeight: 500 } },
         labels: { style: { colors: 'var(--color-text-secondary)' }, formatter: (val) => val.toFixed(2) },
     },
     tooltip: {
         ...commonOptions.tooltip,
         x: {
-            formatter: (val) => {
+            formatter: (val, { dataPointIndex, seriesIndex, w }) => {
+                const swim = w.config.series[seriesIndex].data[dataPointIndex][2] as Swim;
                 if (xAxis === 'Date') return moment(val).format('DD MMM YYYY');
-                return `${Number(val).toFixed(2)} m/s`;
+                return `${Number(val).toFixed(2)} m/s (${moment(swim.date).format('DD MMM YYYY')})`;
             }
         },
         y: { formatter: (val) => val.toFixed(3) }

@@ -1,3 +1,5 @@
+import type { HrZoneDefinition } from '../store/SwimStore';
+
 export const calculateMean = (values: number[]): number => {
   if (values.length === 0) return 0;
   const sum = values.reduce((acc, val) => acc + val, 0);
@@ -52,4 +54,47 @@ export const calculateStdDev = (values: number[]): number => {
   const mean = calculateMean(values);
   const variance = values.reduce((acc, val) => acc + (val - mean) ** 2, 0) / (values.length - 1);
   return Math.sqrt(variance);
+};
+
+export const calculateHrZoneTimes = (
+  hrStream: number[],
+  maxHr: number,
+  hrZoneDefinitions: HrZoneDefinition[]
+): { name: string; value: number; color: string }[] => {
+  if (!hrStream || hrStream.length === 0 || !maxHr || maxHr <= 0) {
+    return [];
+  }
+
+  const zoneTimes: { [key: string]: number } = {};
+  hrZoneDefinitions.forEach(zone => {
+    zoneTimes[zone.name] = 0;
+  });
+
+  hrStream.forEach(hr => {
+    const hrPercentage = hr / maxHr;
+    for (const zone of hrZoneDefinitions) {
+      if (hrPercentage >= zone.min && hrPercentage < zone.max) {
+        zoneTimes[zone.name]++;
+        break;
+      }
+    }
+  });
+
+  return hrZoneDefinitions.map(zone => ({
+    name: zone.name,
+    value: zoneTimes[zone.name] || 0,
+    color: zone.color,
+  })).filter(zone => zone.value > 0);
+};
+
+export const calculateAge = (dobString: string): number | null => {
+  if (!dobString) return null;
+  const dob = new Date(dobString);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+    age--;
+  }
+  return age;
 };

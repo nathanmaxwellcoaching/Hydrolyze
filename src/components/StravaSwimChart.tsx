@@ -4,6 +4,7 @@ import type { ApexOptions } from 'apexcharts';
 import moment from 'moment';
 import { Box, Button, ButtonGroup } from '@mui/material';
 import type { StravaSession } from '../store/SwimStore';
+import swimStore from '../store/SwimStore';
 
 type TimeGroup = 'day' | 'week' | 'month';
 
@@ -12,16 +13,18 @@ const groupSwimsByTime = (swims: StravaSession[], groupBy: TimeGroup) => {
   const groupedData = swims.reduce((acc, swim) => {
     const date = moment(swim.start_date).format(format);
     if (!acc[date]) {
-      acc[date] = 0;
+      acc[date] = { distance: 0, sessions: [] };
     }
-    acc[date] += swim.distance;
+    acc[date].distance += swim.distance;
+    acc[date].sessions.push(swim);
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, { distance: number; sessions: StravaSession[] }>);
 
   return Object.entries(groupedData)
-    .map(([date, distance]) => ({
+    .map(([date, data]) => ({
       x: date,
-      y: distance,
+      y: data.distance,
+      sessions: data.sessions,
     }))
     .sort((a, b) => moment(a.x).diff(moment(b.x)));
 };
@@ -36,6 +39,17 @@ const StravaSwimChart = ({ swims }: { swims: StravaSession[] }) => {
       type: 'bar',
       background: 'transparent',
       fontFamily: 'JetBrains Mono Nerd Font, monospace',
+      events: {
+        dataPointSelection: (event, chartContext, config) => {
+          const dataPointIndex = config.dataPointIndex;
+          const seriesIndex = config.seriesIndex;
+          const selectedDataPoint = chartData[dataPointIndex];
+          if (selectedDataPoint && selectedDataPoint.sessions.length > 0) {
+            // For simplicity, select the first session in the group
+            swimStore.openRecordDetailModal(selectedDataPoint.sessions[0]);
+          }
+        },
+      },
     },
     theme: { mode: 'dark' },
     colors: ['var(--color-accent-green)'],
