@@ -40,9 +40,8 @@ const StravaSwimChart = ({ swims }: { swims: StravaSession[] }) => {
       background: 'transparent',
       fontFamily: 'JetBrains Mono Nerd Font, monospace',
       events: {
-        dataPointSelection: (event, chartContext, config) => {
+        dataPointSelection: (_, __, config) => {
           const dataPointIndex = config.dataPointIndex;
-          const seriesIndex = config.seriesIndex;
           const selectedDataPoint = chartData[dataPointIndex];
           if (selectedDataPoint && selectedDataPoint.sessions.length > 0) {
             // For simplicity, select the first session in the group

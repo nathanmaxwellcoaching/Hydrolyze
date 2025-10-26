@@ -245,7 +245,7 @@ const SwimTimesChart = observer(() => {
       ...commonOptions.chart,
       id: 'dynamic-chart',
       events: {
-        dataPointSelection: (event, chartContext, config) => {
+        dataPointSelection: (_, __, config) => {
           const dataPointIndex = config.dataPointIndex;
           const seriesIndex = config.seriesIndex;
           const selectedSeries = augmentedDynamicSeries[seriesIndex];
