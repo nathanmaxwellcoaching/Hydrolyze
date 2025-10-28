@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import swimStore, { type Swim, type User } from '../store/SwimStore';
-import { db } from '../firebase-config';
-import { collection, getDocs, query, where } from 'firebase/firestore';
 import { 
   Autocomplete, Box, Typography, TextField, Button, Select, MenuItem, 
   FormControl, InputLabel, OutlinedInput, Grid, useTheme, useMediaQuery, 
@@ -69,12 +67,8 @@ const NewRecordForm = observer(() => {
   const is_admin = swimStore.currentUser?.isAdmin;
 
   useEffect(() => {
-    const load = async () => {
-      const snap = await getDocs(collection(db, 'users'));
-      setAllUsers(snap.docs.map(d => ({ ...d.data(), id: d.id } as User)));
-    };
-    load();
-  }, []);
+    setAllUsers(swimStore.users);
+  }, [swimStore.users]);
 
   useEffect(() => {
     if (swimStore.currentUser) {
@@ -86,33 +80,22 @@ const NewRecordForm = observer(() => {
     if (!formState.swimmerName) return;
     const userRec = allUsers.find(u => u.name === formState.swimmerName);
     if (!userRec) return;
-    (async () => {
-      const q = query(collection(db, 'goal_times'), where('email', '==', userRec.email));
-      const snap = await getDocs(q);
-      const distances: number[] = [];
-      const map: Record<string, number> = {};
-      snap.forEach((d) => {
-        const g: Record<string, any> = d.data(); // Get raw data as a dynamically indexable type
-        const gearStr = (g.gear && g.gear.length) ? g.gear.sort().join('-') : 'NoGear';
-        const key = `${g.distance}-${g.stroke}-${gearStr}-${g.poolLength}`;
 
-        let timeValue: number | undefined;
-        for (const field in g) {
-          if (field === key) {
-            timeValue = g[field];
-            break;
-          }
-        }
-        if (timeValue !== undefined) {
-          map[key] = timeValue;
-          distances.push(g.distance);
-        }
-      });
-      setGoalDistances([...new Set(distances)].sort((a, b) => a - b));
-      setGoalTimeMap(map);
-      console.log("Populated goalTimeMap:", map);
-    })();
-  }, [formState.swimmerName, allUsers]);
+    const userGoalTimes = swimStore.goalTimes.filter(gt => gt.email === userRec.email);
+
+    const distances: number[] = [];
+    const map: Record<string, number> = {};
+    userGoalTimes.forEach((g) => {
+      const gearStr = (g.gear && g.gear.length) ? g.gear.sort().join('-') : 'NoGear';
+      const key = `${g.distance}-${g.stroke}-${gearStr}-${g.poolLength}`;
+
+      map[key] = g.time;
+      distances.push(g.distance);
+    });
+    setGoalDistances([...new Set(distances)].sort((a, b) => a - b));
+    setGoalTimeMap(map);
+    console.log("Populated goalTimeMap:", map);
+  }, [formState.swimmerName, allUsers, swimStore.goalTimes]);
 
   useEffect(() => {
     if (isRace) {

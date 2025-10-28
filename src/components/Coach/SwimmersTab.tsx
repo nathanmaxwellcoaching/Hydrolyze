@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
+import { observer } from 'mobx-react-lite';
 import { Box, Typography, Button, Modal, TextField, List, ListItem, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import swimStore from '../../store/SwimStore';
-import { collection, addDoc, getDoc, doc, updateDoc, arrayRemove, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase-config';
 
 const style = {
   position: 'absolute' as 'absolute',
@@ -17,81 +16,32 @@ const style = {
   p: 4,
 };
 
-interface Swimmer {
-  id: string;
-  name: string;
-  email: string;
-}
 
-interface Invitation {
-  id: string;
-  swimmerEmail: string;
-}
-
-const SwimmersTab = () => {
+const SwimmersTab = observer(() => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
-  const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
-  const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([]);
 
   useEffect(() => {
-    const fetchSwimmers = async () => {
-      if (swimStore.currentUser && swimStore.currentUser.swimmers) {
-        const swimmerPromises = swimStore.currentUser.swimmers.map(swimmerId => getDoc(doc(db, 'users', swimmerId)));
-        const swimmerDocs = await Promise.all(swimmerPromises);
-        const fetchedSwimmers = swimmerDocs.map(doc => ({ ...doc.data(), id: doc.id } as Swimmer));
-        setSwimmers(fetchedSwimmers);
-      }
-    };
-
-    const fetchPendingInvitations = async () => {
-      if (swimStore.currentUser) {
-        const invitationsCollection = collection(db, 'invitations');
-        const q = query(
-          invitationsCollection,
-          where('coachId', '==', swimStore.currentUser.id),
-          where('status', '==', 'pending')
-        );
-        const querySnapshot = await getDocs(q);
-        const fetchedInvitations = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Invitation));
-        setPendingInvitations(fetchedInvitations);
-      }
-    };
-
-    fetchSwimmers();
-    fetchPendingInvitations();
-  }, [swimStore.currentUser]);
+    swimStore.loadInvitations();
+  }, []);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const handleInvite = async () => {
-    if (swimStore.currentUser && swimStore.currentUser.userType === 'coach') {
-      const invitationsCollection = collection(db, 'invitations');
-      await addDoc(invitationsCollection, {
-        coachId: swimStore.currentUser.id,
-        swimmerEmail: email,
-        status: 'pending',
-      });
-      handleClose();
-    }
+    await swimStore.inviteSwimmer(email);
+    handleClose();
   };
 
   const handleRemoveSwimmer = async (swimmerId: string) => {
-    if (swimStore.currentUser) {
-      const coachRef = doc(db, 'users', swimStore.currentUser.id);
-      await updateDoc(coachRef, {
-        swimmers: arrayRemove(swimmerId),
-      });
-
-      const swimmerRef = doc(db, 'users', swimmerId);
-      await updateDoc(swimmerRef, {
-        coaches: arrayRemove(swimStore.currentUser.id),
-      });
-
-      setSwimmers(swimmers.filter(swimmer => swimmer.id !== swimmerId));
-    }
+    await swimStore.removeSwimmer(swimmerId);
   };
+
+  const swimmers = swimStore.currentUser?.swimmers
+    ? swimStore.users.filter(u => swimStore.currentUser?.swimmers?.includes(u.id))
+    : [];
+
+  const pendingInvitations = swimStore.invitations.filter(i => i.coachId === swimStore.currentUser?.id);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -140,6 +90,6 @@ const SwimmersTab = () => {
       </Modal>
     </Box>
   );
-};
+});
 
 export default SwimmersTab;

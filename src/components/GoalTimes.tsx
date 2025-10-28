@@ -1,8 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
-import { collection, doc, deleteDoc, updateDoc, addDoc, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase-config';
 import swimStore from '../store/SwimStore';
 import { Box, Typography, IconButton, Collapse, TextField, Select, MenuItem, InputLabel, FormControl, OutlinedInput, Checkbox, ListItemText, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, useMediaQuery, useTheme, Stack, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material';
@@ -42,7 +40,6 @@ const GoalTimes = observer(() => {
     const [gear, setGear] = useState<string[]>([]);
     const [poolLength, setPoolLength] = useState<25 | 50>(25);
     const [time, setTime] = useState('');
-    const [goalTimes, setGoalTimes] = useState<GoalTime[]>([]);
 
 const columnDisplayNames: Record<keyof GoalTime, string> = {
   id: 'ID',
@@ -67,58 +64,11 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
         if (swimStore.currentUser?.email) setEmail(swimStore.currentUser.email);
     }, [swimStore.currentUser?.email]);
 
-    const fetchGoalTimes = async () => {
-        let q;
-        if (swimStore.currentUser?.isAdmin) {
-            let queryConstraints = [];
-            if (filters.swimmer) queryConstraints.push(where("email", "==", filters.swimmer));
-            if (filters.stroke) queryConstraints.push(where("stroke", "==", filters.stroke));
-            if (filters.distance) queryConstraints.push(where("distance", "==", parseInt(filters.distance, 10)));
-            q = query(collection(db, "goal_times"), ...queryConstraints);
-        } else if (swimStore.currentUser?.userType === 'coach') {
-            const swimmerEmails = swimStore.swimmerUsers.map(u => u.email);
-            if (swimmerEmails.length > 0) {
-                let queryConstraints = [where("email", "in", swimmerEmails)];
-                if (filters.swimmer) queryConstraints.push(where("email", "==", filters.swimmer));
-                if (filters.stroke) queryConstraints.push(where("stroke", "==", filters.stroke));
-                if (filters.distance) queryConstraints.push(where("distance", "==", parseInt(filters.distance, 10)));
-                q = query(collection(db, "goal_times"), ...queryConstraints);
-            } else {
-                setGoalTimes([]);
-                return;
-            }
-        } else if (swimStore.currentUser?.email) {
-            q = query(collection(db, "goal_times"), where("email", "==", swimStore.currentUser.email));
-        } else {
-            setGoalTimes([]);
-            return;
-        }
-        const querySnapshot = await getDocs(q);
-        const times: GoalTime[] = [];
-        querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            const swimmerName = swimStore.users.find(u => u.email === data.email)?.name;
-            const rawStroke = data.stroke as string;
-            const validatedStroke: GoalTime['stroke'] = strokes.includes(rawStroke) ? (rawStroke as GoalTime['stroke']) : 'Freestyle';
-            const validatedGear: GoalTime['gear'] = Array.isArray(data.gear) ? (data.gear as string[]).filter(g => gearOptions.includes(g as any)) as GoalTime['gear'] : [];
-            const validatedPoolLength: GoalTime['poolLength'] = (data.poolLength === 25 || data.poolLength === 50) ? data.poolLength : 25;
-
-            const expectedFieldName = `${data.distance}-${validatedStroke}-${validatedGear.join('-')}-${validatedPoolLength}`;
-            const timeValue = data[expectedFieldName];
-
-            times.push({ id: doc.id, email: data.email, swimmerName, stroke: validatedStroke, distance: data.distance, gear: validatedGear, poolLength: validatedPoolLength, time: timeValue } as GoalTime);
-        });
-        setGoalTimes(times);
-    };
-
-    useEffect(() => { fetchGoalTimes(); }, [swimStore.currentUser?.email, filters, swimStore.users.length]);
-
     const handleAddGoalTime = async () => {
         if (strokes.includes(stroke) && !isNaN(parseInt(distance, 10)) && parseInt(distance, 10) > 0 && gear.every(g => gearOptions.includes(g)) && !isNaN(parseFloat(time)) && parseFloat(time) > 0) {
-            const fieldName = `${distance}-${stroke}-${gear.join('-')}-${poolLength}`;
             const emailToUse = swimStore.currentUser?.isAdmin ? email : swimStore.currentUser?.email || '';
-            await addDoc(collection(db, "goal_times"), { email: emailToUse, stroke, distance: parseInt(distance, 10), gear, poolLength, [fieldName]: parseFloat(time) });
-            setStroke('Freestyle'); setDistance(''); setGear([]); setTime(''); setShowForm(false); fetchGoalTimes();
+            await swimStore.addGoalTime({ email: emailToUse, stroke, distance: parseInt(distance, 10), gear, poolLength, time: parseFloat(time) } as GoalTime);
+            setStroke('Freestyle'); setDistance(''); setGear([]); setTime(''); setShowForm(false);
         }
     };
 
@@ -128,23 +78,11 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
     };
 
     const handleDeleteGoalTime = async (id: string) => {
-        await deleteDoc(doc(db, "goal_times", id));
-        setGoalTimes(goalTimes.filter((time) => time.id !== id));
+        await swimStore.deleteGoalTime(id);
     };
 
     const handleUpdateGoalTime = async (id: string, updatedData: Partial<GoalTime>) => {
-        const goalTimeDoc = doc(db, "goal_times", id);
-        const currentTimeData = goalTimes.find(time => time.id === id);
-        let timeKey = null;
-        if (currentTimeData) {
-            for (const key in currentTimeData) {
-                if (key !== 'id' && key !== 'email' && key !== 'swimmerName' && key !== 'stroke' && key !== 'distance' && key !== 'gear' && key !== 'time') { timeKey = key; break; }
-            }
-        }
-        if (!timeKey) return;
-        const updatePayload: any = { stroke: updatedData.stroke, distance: updatedData.distance, gear: updatedData.gear, poolLength: updatedData.poolLength, [timeKey]: updatedData.time };
-        await updateDoc(goalTimeDoc, updatePayload);
-        setGoalTimes(goalTimes.map(time => time.id === id ? { ...time, ...updatedData } : time));
+        await swimStore.updateGoalTime(id, updatedData);
     };
 
     const handleEditChange = (id: string, field: keyof GoalTime, value: any) => {
@@ -158,7 +96,7 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
     };
 
     const handleSave = async (id: string) => {
-        const originalRecord = goalTimes.find(goalTime => goalTime.id === id);
+        const originalRecord = swimStore.goalTimes.find(goalTime => goalTime.id === id);
         const updatedData = editState[id];
         if (originalRecord && updatedData) {
             const updatedRecord = { ...originalRecord, ...updatedData };
@@ -177,13 +115,11 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
 
     const handleAdminFilterApply = () => {
         swimStore.applyGoalTimeFilters(filters);
-        fetchGoalTimes();
     };
 
     const handleAdminFilterClear = () => {
         setFilters({ swimmer: '', stroke: '', distance: '' });
         swimStore.clearGoalTimeFilters();
-        fetchGoalTimes();
     };
 
     const availableColumns = Object.keys(columnDisplayNames).map(key => ({ id: key, label: columnDisplayNames[key as keyof GoalTime] }));
@@ -234,7 +170,7 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
 
                                         <MenuItem value="">(All)</MenuItem>
 
-                                        {(swimStore.currentUser?.isAdmin ? [...new Map(goalTimes.map(item => [item.email, {email: item.email, name: item.swimmerName || item.email}])).values()] : swimStore.swimmerUsers).map((user) => <MenuItem key={user.email} value={user.email}>{user.name}</MenuItem>)}
+                                        {(swimStore.currentUser?.isAdmin ? [...new Map(swimStore.goalTimes.map(item => [item.email, {email: item.email, name: item.swimmerName || item.email}])).values()] : swimStore.swimmerUsers).map((user) => <MenuItem key={user.email} value={user.email}>{user.name}</MenuItem>)}
 
                                     </Select>
 
@@ -300,7 +236,7 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
 
                             <Stack spacing={2} sx={{ mt: 2 }}>
 
-                                {goalTimes.map((record) => (
+                                {swimStore.goalTimes.map((record) => (
 
                                     <Paper
 
@@ -404,7 +340,7 @@ const columnDisplayNames: Record<keyof GoalTime, string> = {
 
                                 <TableBody>
 
-                                    {goalTimes.map((record) => (
+                                    {swimStore.goalTimes.map((record) => (
 
                                         <TableRow key={record.id} sx={{ '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' } }}>
 
