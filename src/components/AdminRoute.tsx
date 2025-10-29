@@ -1,19 +1,13 @@
+import { observer } from 'mobx-react-lite';
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import swimStore from '../store/SwimStore';
 
-const AdminRoute = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user || !swimStore.currentUser?.isAdmin) {
+const AdminRoute = observer(() => {
+  if (!swimStore.isAuthenticated || !swimStore.currentUser?.isAdmin) {
     return <Navigate to="/" replace />;
   }
 
   return <Outlet />;
-};
+});
 
 export default AdminRoute;

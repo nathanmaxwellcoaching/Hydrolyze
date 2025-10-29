@@ -1,20 +1,12 @@
 import { makeAutoObservable, runInAction, computed } from "mobx";
-import { supabase } from '../supabase-config';
+import { db, auth } from "../firebase-config";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "firebase/auth";
 import axios from 'axios';
 import { calculateMean, calculateStdDev, calculateHrZoneTimes, calculateAge } from "../utils/statistics";
 
-export interface GoalTime {
-  stroke: string;
-  distance: number;
-  gear: string;
-  poolLength: number;
-  time: number;
-  swimmerName: string;
-  userID: string;
-}
-
 export interface User {
-  UID: string; // Supabase UID
+  id: string; // Firebase UID
   name: string;
   email: string;
   isAdmin: boolean;
@@ -47,17 +39,8 @@ export interface StravaSession {
   hrZoneTimes?: { name: string; value: number; color: string }[];
 }
 
-export interface Invitation {
-  id: string;
-  coachId: string;
-  swimmerEmail: string;
-  status: string;
-  coachName?: string;
-  coachEmail?: string;
-}
-
 export interface Swim {
-  id: string;
+  id: string; // Changed to string to accommodate Firestore document IDs
   date: string;
   distance: number;
   duration: number;
@@ -107,15 +90,42 @@ interface Filters {
   swimmerEmail: string | null;
 }
 
+export interface GoalTime {
 
+  id: string;
+
+  email: string;
+
+  swimmerName?: string;
+
+  stroke: 'Freestyle' | 'Backstroke' | 'Breaststroke' | 'Butterfly';
+
+  distance: number;
+
+  gear: ('Fins' | 'Paddles' | 'Pull Buoy' | 'Snorkel' | 'NoGear') [];
+
+  poolLength: 25 | 50;
+
+  time: number;
+
+}
+
+export const GOAL_TIMES_CANONICAL_COLUMN_ORDER: (keyof GoalTime | 'id' | 'email' | 'stroke' | 'distance' | 'gear' | 'time')[] = [
+    'id',
+    'email',
+    'stroke',
+    'distance',
+    'gear',
+    'time',
+];
 
 class SwimStore {
   swims: Swim[] = [];
   stravaSessions: StravaSession[] = [];
   users: User[] = [];
-  goalTimes: GoalTime[] = [];
-  invitations: Invitation[] = [];
-
+  currentUser: User | null = null;
+  isLoading = true;
+  activeFilters: Filters = { stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null, paceDistance: null, swimmerEmail: null };
   visibleColumns: (keyof Swim)[] = CANONICAL_COLUMN_ORDER.filter(col => !(['id', 'poolLength', 'averageStrokeRate', 'heartRate', 'velocity', 'sl', 'si', 'ie'].includes(col as string)));
   showTrendlineDetails = false;
   showSwimTimesChart = true;
@@ -126,9 +136,6 @@ class SwimStore {
   sortOrder: 'date' | 'duration' = 'date';
   visibleGoalTimeColumns: (keyof GoalTime)[] = ['swimmerName', 'stroke', 'distance', 'gear', 'time'];
   sdChartYAxis: 'si' | 'velocity' | 'ie' | 'averageStrokeRate' | 'sl' | 'duration' = 'velocity';
-  currentUser: User | null = null;
-  activeFilters: Filters = { stroke: null, distance: null, gear: null, poolLength: null, startDate: null, endDate: null, paceDistance: null, swimmerEmail: null };
-  private _refreshUserProfile: (() => Promise<void>) | null = null;
 
   // HR Zone related state
   userMaxHr: number | null = null;
@@ -145,7 +152,6 @@ class SwimStore {
   selectedRecordForDetail: Swim | StravaSession | null = null;
 
   constructor() {
-    console.log("SwimStore constructor");
     makeAutoObservable(this, {
       userSwims: computed,
       filteredSwims: computed,
@@ -155,8 +161,15 @@ class SwimStore {
       achievementRates: computed,
       averageAndSd: computed,
       velocityDistanceData: computed,
+      isAuthenticated: computed,
       outlierSwims: computed,
       sdChartData: computed,
+    });
+    this.setupFirebaseAuthObserver();
+    // Call loadStravaSessions after auth observer has potentially set userMaxHr
+    auth.onAuthStateChanged(() => {
+      this.loadSwims();
+      this.loadStravaSessions();
     });
   }
 
@@ -204,269 +217,16 @@ class SwimStore {
     }
   }
 
-  async loadInvitations() {
-    if (!this.currentUser) return;
-    const { data, error } = await supabase
-      .from('invitations')
-.select('*, coach:coachId(*)') // Re-added 'coach:coachId(*)'
-      .or(`swimmerEmail.eq.${this.currentUser.email},coachId.eq.${this.currentUser.UID}`)
-      .eq('status', 'pending');
-
-    if (error) {
-      console.error('Error loading invitations:', error);
-      return;
-    }
-
-    const invitations = data.map((inv: any) => ({
-        ...inv,
-        coachName: inv.coach.name,
-        coachEmail: inv.coach.email,
-    }));
-
-    runInAction(() => {
-      this.invitations = invitations as Invitation[];
-    });
-  }
-
-  async inviteSwimmer(email: string) {
-    if (!this.currentUser) return;
-    const { error } = await supabase.from('invitations').insert([
-      {
-        coachId: this.currentUser.UID,
-        swimmerEmail: email,
-        status: 'pending',
-      },
-    ]);
-
-    if (error) {
-      console.error('Error inviting swimmer:', error);
-      return;
-    }
-
-    this.loadInvitations();
-  }
-
-  async removeSwimmer(swimmerId: string) {
-    if (!this.currentUser) return;
-
-    const { error: userError } = await supabase
-        .from('users')
-                    .update({ swimmers: this.currentUser.swimmers?.filter((uid: string) => uid !== swimmerId) })
-                .eq('UID', this.currentUser.UID);
-    if (userError) {
-        console.error('Error removing swimmer from user:', userError);
-        return;
-    }
-
-    const { data: swimmer, error: swimmerError } = await supabase
-        .from('users')
-        .select('coaches')
-        .eq('UID', swimmerId)
-        .single();
-
-    if (swimmerError) {
-        console.error('Error fetching swimmer:', swimmerError);
-        return;
-    }
-
-    if (this.currentUser) {
-        const { error: swimmerUpdateError } = await supabase
-            .from('users')
-            .update({ coaches: swimmer.coaches?.filter((uid: string) => uid !== this.currentUser!.UID) })
-            .eq('UID', swimmerId);
-
-        if (swimmerUpdateError) {
-            console.error('Error removing coach from swimmer:', swimmerUpdateError);
-            return;
-        }
-    }
-
-    this.loadUsers();
-    if (this._refreshUserProfile) {
-      this._refreshUserProfile();
-    }
-  }
-
-  async acceptInvitation(invitation: Invitation) {
-    const { error } = await supabase
-      .from('invitations')
-      .update({ status: 'accepted' })
-      .eq('id', invitation.id);
-
-    if (error) {
-      console.error('Error accepting invitation:', error);
-      return;
-    }
-
-    if (this.currentUser) {
-        const { error: userError } = await supabase
-            .from('users')
-            .update({ coaches: [...(this.currentUser.coaches || []), invitation.coachId] })
-            .eq('UID', this.currentUser.UID);
-        if (userError) {
-            console.error('Error updating user coaches:', userError);
-            return;
-        }
-    }
-
-    const { data: coach, error: coachError } = await supabase
-        .from('users')
-        .select('swimmers')
-        .eq('UID', invitation.coachId)
-        .single();
-
-    if (coachError) {
-        console.error('Error fetching coach:', coachError);
-        return;
-    }
-
-    if (this.currentUser) {
-        const { error: coachUpdateError } = await supabase
-            .from('users')
-            .update({ swimmers: [...(coach.swimmers || []), this.currentUser.UID] })
-            .eq('UID', invitation.coachId);
-
-        if (coachUpdateError) {
-            console.error('Error updating coach swimmers:', coachUpdateError);
-            return;
-        }
-    }
-
-    this.loadInvitations();
-    this.loadUsers();
-    if (this._refreshUserProfile) {
-      this._refreshUserProfile();
-    }
-  }
-
-  async rejectInvitation(invitation: Invitation) {
-    const { error } = await supabase
-      .from('invitations')
-      .update({ status: 'rejected' })
-      .eq('id', invitation.id);
-
-    if (error) {
-      console.error('Error rejecting invitation:', error);
-      return;
-    }
-
-    this.loadInvitations();
-  }
-
-  async removeCoach(coachId: string) {
-    if (!this.currentUser) return;
-
-    const { error: userError } = await supabase
-        .from('users')
-        .update({ coaches: this.currentUser.coaches?.filter((uid: string) => uid !== coachId) })
-        .eq('UID', this.currentUser.UID);
-
-    if (userError) {
-        console.error('Error removing coach from user:', userError);
-        return;
-    }
-
-    const { data: coach, error: coachError } = await supabase
-        .from('users')
-        .select('swimmers')
-        .eq('UID', coachId)
-        .single();
-    
-    if (coachError) {
-        console.error('Error fetching coach:', coachError);
-        return;
-    }
-
-    if (this.currentUser) {
-        const { error: coachUpdateError } = await supabase
-            .from('users')
-            .update({ swimmers: coach.swimmers?.filter((uid: string) => uid !== this.currentUser!.UID) })
-            .eq('UID', coachId);
-
-        if (coachUpdateError) {
-            console.error('Error removing swimmer from coach:', coachUpdateError);
-            return;
-        }
-    }
-
-    this.loadUsers();
-    if (this._refreshUserProfile) {
-      this._refreshUserProfile();
-    }
-  }
-
-
-
-
-  async loadGoalTimes() {
-    console.log("loadGoalTimes called, currentUser:", this.currentUser);
-    if (!this.currentUser) return;
-
-    let query = supabase.from('goal_times').select('*');
-
-    if (!this.currentUser.isAdmin && this.currentUser.userType !== 'coach') {
-      query = query.eq('userID', this.currentUser.UID);
-    } else if (this.currentUser.userType === 'coach' && this.currentUser.swimmers) {
-      query = query.in('userID', this.currentUser.swimmers);
-    }
-
-    const { data, error } = await query;
-
-    console.log("Supabase query data:", data);
-    console.log("Supabase query error:", error);
-
-    if (error) {
-        console.error('Error loading goal times:', error);
-        return;
-    }
-
-    if (data) {
-      const processedGoalTimes: GoalTime[] = [];
-      data.forEach(row => {
-        const userID = row.userID;
-        const swimmerName = this.users.find(u => u.UID === userID)?.name || 'Unknown';
-
-        for (const key in row) {
-          if (key.includes('-')) {
-            const parts = key.split('-');
-            if (parts.length === 4) {
-              const [distance, stroke, gear, poolLength] = parts;
-              const time = row[key];
-              if (time) {
-                processedGoalTimes.push({
-                  stroke,
-                  distance: parseInt(distance),
-                  gear,
-                  poolLength: parseInt(poolLength),
-                  time,
-                  swimmerName,
-                  userID,
-                });
-              }
-            }
-          }
-        }
-      });
-
-      runInAction(() => {
-        this.goalTimes = processedGoalTimes;
-      });
-    }
-  }
-
   async loadStravaSessions() {
-    const { data, error } = await supabase.from('strava_sessions').select('*');
-    if (error) {
-        console.error('Error loading Strava sessions:', error);
-        return;
-    }
-    let sessionList = data as StravaSession[];
+    const sessionsCollection = collection(db, "strava_sessions");
+    const sessionSnapshot = await getDocs(sessionsCollection);
+    let sessionList = sessionSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StravaSession));
 
     const enrichedSessions: StravaSession[] = [];
     for (const session of sessionList) {
       if (this.userMaxHr && this.currentUser?.stravaClientId && this.currentUser?.stravaClientSecret) {
         try {
-          const accessToken = await this.getStravaAccessToken(this.currentUser);
+          const accessToken = await this.getStravaAccessToken();
           if (accessToken) {
             const streamsResponse = await axios.get(
               `https://www.strava.com/api/v3/activities/${session.id}/streams?keys=heartrate&key_by_type=true`,
@@ -495,17 +255,66 @@ class SwimStore {
     });
   }
 
+  setupFirebaseAuthObserver() {
+    onAuthStateChanged(auth, async (firebaseUser) => {
+      runInAction(() => { this.isLoading = true; });
+      if (firebaseUser) {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
 
+        if (userDoc.exists()) {
+          const user = { ...userDoc.data(), id: userDoc.id } as User;
+          let users: User[] = [];
+          if (user.isAdmin || user.userType === 'coach') {
+            try {
+              users = await this.loadUsers();
+            } catch (error) {
+              console.error("Failed to load users:", error);
+            }
+          }
+          runInAction(() => {
+            this.currentUser = user;
+            if (user.userMaxHr) {
+              this.userMaxHr = user.userMaxHr;
+            } else if (user.dob) {
+              const age = calculateAge(user.dob);
+              if (age !== null) {
+                this.userMaxHr = 220 - age;
+              }
+            } else {
+              this.userMaxHr = null;
+            }
+            if (users.length > 0) {
+              this.users = users;
+            }
+            this.isLoading = false;
+          });
+        } else {
+          runInAction(() => {
+            this.currentUser = {
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+              email: firebaseUser.email!,
+              isAdmin: false,
+              userType: 'swimmer',
+              coaches: [],
+            };
+            this.isLoading = false;
+          });
+        }
+      } else {
+        runInAction(() => {
+          this.currentUser = null;
+          this.isLoading = false;
+        });
+      }
+    });
+  }
 
   async loadSwims() {
-    console.log("loading swims");
-    const { data, error } = await supabase.from('swimRecords').select('*');
-    if (error) {
-        console.error('Error loading swims:', error);
-        return;
-    }
-
-    const swimList = data as Swim[];
+    const swimsCollection = collection(db, "swimRecords");
+    const swimSnapshot = await getDocs(swimsCollection);
+    const swimList = swimSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Swim));
     runInAction(() => {
       this.swims = swimList.map(s => {
           // Backfill metrics for older records
@@ -549,97 +358,79 @@ class SwimStore {
         };
       }
     });
-    console.log("swims loaded");
   }
 
-  async loadUsers(): Promise<User[]> {
-    const { data: users, error } = await supabase.from('users').select('*');
-    if (error) {
-        console.error('Error loading users:', error);
-        return [];
-    }
-    runInAction(() => {
-      this.users = users as User[];
+  async loadUsers() {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return [];
+    const response = await axios.get('http://localhost:10000/api/users', {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    console.log("Fetched users:", users);
-    return users as User[];
+    console.log("Fetched users:", response.data);
+    return response.data;
   }
 
-  async updateUser(uid: string, updatedData: Partial<User>) {
-    const { error } = await supabase.from('users').update(updatedData).eq('UID', uid);
-    if (error) {
-        console.error('Error updating user:', error);
-        return;
-    }
+  async updateUser(id: string, updatedData: Partial<User>) {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return;
+    await axios.put(`http://localhost:10000/api/users/${id}`,
+      updatedData,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     this.loadUsers();
   }
 
-  async deleteUser(uid: string) {
-    const { error } = await supabase.from('users').delete().eq('UID', uid);
-    if (error) {
-        console.error('Error deleting user:', error);
-        return;
-    }
+  async deleteUser(id: string) {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return;
+    await axios.delete(`http://localhost:10000/api/users/${id}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     this.loadUsers();
   }
 
   async login(email: string, password: string): Promise<boolean> {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-        console.error('Error logging in:', error);
-        return false;
-    }
+    await signInWithEmailAndPassword(auth, email, password);
+    // onAuthStateChanged observer will handle setting currentUser
     return true;
   }
 
   async logout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-        console.error('Error logging out:', error);
-    }
+    await signOut(auth);
+    // onAuthStateChanged observer will handle setting currentUser to null
   }
 
+  get isAuthenticated() {
+    return this.currentUser !== null;
+  }
 
   async register(name: string, email: string, password: string, userType: 'swimmer' | 'coach', stravaClientId?: string, stravaClientSecret?: string) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            data: {
-                name,
-            }
-        }
-    });
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
 
-    if (authError) {
-        console.error('Error signing up:', authError);
-        return;
+    // Add user profile to Firestore
+    const usersCollection = collection(db, "users");
+    const userData: Omit<User, 'id'> = {
+      name: name,
+      email: email,
+      isAdmin: false, // Default to false for new registrations
+      userType: userType,
+      ...(userType === 'coach' && { swimmers: [] }),
+      ...(userType === 'swimmer' && { coaches: [] }),
+    };
+
+    if (stravaClientId) {
+      userData.stravaClientId = Number(stravaClientId);
+    }
+    if (stravaClientSecret) {
+      userData.stravaClientSecret = stravaClientSecret;
     }
 
-    if (authData.user) {
-        const userData: Omit<User, 'UID'> = {
-          name: name,
-          email: email,
-          isAdmin: false, // Default to false for new registrations
-          userType: userType,
-          ...(userType === 'coach' && { swimmers: [] }),
-          ...(userType === 'swimmer' && { coaches: [] }),
-        };
-
-        if (stravaClientId) {
-          userData.stravaClientId = Number(stravaClientId);
-        }
-        if (stravaClientSecret) {
-          userData.stravaClientSecret = stravaClientSecret;
-        }
-
-        const { error: insertError } = await supabase.from('users').insert([{ ...userData, UID: authData.user.id }]);
-        if (insertError) {
-            console.error('Error inserting user data:', insertError);
-            return;
-        }
-    }
-
+    await setDoc(doc(usersCollection, firebaseUser.uid), userData);
 
     // onAuthStateChanged observer will handle setting currentUser
     this.loadUsers(); // Refresh the list of users
@@ -695,18 +486,10 @@ class SwimStore {
     this.visibleGoalTimeColumns = columns;
   }
 
-  setCurrentUser(user: User | null) {
-    this.currentUser = user;
-  }
-
-  setRefreshUserProfile(refreshFn: () => Promise<void>) {
-    this._refreshUserProfile = refreshFn;
-  }
-
   setUserMaxHr(maxHr: number | null) {
     this.userMaxHr = maxHr;
     if (this.currentUser && maxHr !== null) {
-      this.updateUser(this.currentUser.UID, { userMaxHr: maxHr });
+      this.updateUser(this.currentUser.id, { userMaxHr: maxHr });
     }
   }
 
@@ -725,14 +508,14 @@ class SwimStore {
     if (this.currentUser) {
       if (this.currentUser.userType === 'coach' && this.currentUser.swimmers) {
         const swimmerEmails = this.users
-          .filter(user => this.currentUser!.swimmers!.includes(user.UID))
+          .filter(user => this.currentUser!.swimmers!.includes(user.id))
           .map(user => user.email);
         return this.swims.filter(swim => swimmerEmails.includes(swim.swimmerEmail));
       }
       const currentUserEmail = this.currentUser.email;
       return this.swims.filter(swim => swim.swimmerEmail === currentUserEmail);
     }
-    return [];
+    return []; // If no user is logged in, show no swims
   }
 
   get swimsForVelocityChart() {
@@ -844,14 +627,14 @@ class SwimStore {
 
     const distribution = swims.reduce((acc, swim) => {
       if (this.strokeDistributionMetric === 'records') {
-        acc[swim.stroke].value++;
+        acc[swim.stroke] = (acc[swim.stroke] || 0) + 1;
       } else {
-        acc[swim.stroke].value += swim.distance;
+        acc[swim.stroke] = (acc[swim.stroke] || 0) + swim.distance;
       }
       return acc;
-    }, {} as Record<string, { value: number }>);
+    }, {} as Record<string, number>);
 
-    return Object.entries(distribution).map(([name, { value }]) => ({ name, value }));
+    return Object.entries(distribution).map(([name, value]) => ({ name, value }));
   }
 
   get allFiltersSet() {
@@ -863,7 +646,7 @@ class SwimStore {
     if (this.currentUser) {
       if (this.currentUser.userType === 'coach' && this.currentUser.swimmers) {
         return this.users
-          .filter(user => this.currentUser!.swimmers!.includes(user.UID))
+          .filter(user => this.currentUser!.swimmers!.includes(user.id))
           .map(user => user.name);
       }
       return [this.currentUser.name];
@@ -873,7 +656,7 @@ class SwimStore {
 
   get swimmerUsers(): User[] {
     if (this.currentUser && this.currentUser.userType === 'coach' && this.currentUser.swimmers) {
-      return this.users.filter(user => this.currentUser!.swimmers!.includes(user.UID));
+      return this.users.filter(user => this.currentUser!.swimmers!.includes(user.id));
     }
     return [];
   }
@@ -1089,29 +872,20 @@ class SwimStore {
       ...(ie !== undefined && { ie }),
     };
 
-    const { error } = await supabase.from('swimRecords').insert([swimData]);
-    if (error) {
-        console.error('Error adding swim:', error);
-        return;
-    }
+    const swimsCollection = collection(db, "swimRecords");
+    await addDoc(swimsCollection, swimData);
     this.loadSwims();
   }
 
   async updateSwim(id: string, updatedData: Partial<Swim>) {
-    const { error } = await supabase.from('swimRecords').update(updatedData).eq('id', id);
-    if (error) {
-        console.error('Error updating swim:', error);
-        return;
-    }
+    const swimRef = doc(db, "swimRecords", id);
+    await updateDoc(swimRef, updatedData);
     this.loadSwims();
   }
 
   async deleteSwim(id: string) {
-    const { error } = await supabase.from('swimRecords').delete().eq('id', id);
-    if (error) {
-        console.error('Error deleting swim:', error);
-        return;
-    }
+    const swimRef = doc(db, "swimRecords", id);
+    await deleteDoc(swimRef);
     this.loadSwims();
   }
 }

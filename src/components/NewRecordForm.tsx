@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import swimStore, { type Swim, type User } from '../store/SwimStore';
+import { db } from '../firebase-config';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { 
   Autocomplete, Box, Typography, TextField, Button, Select, MenuItem, 
   FormControl, InputLabel, OutlinedInput, Grid, useTheme, useMediaQuery, 
   Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Checkbox, FormControlLabel
 } from '@mui/material';
 import moment from 'moment';
-import { useAuth } from '../contexts/AuthContext';
 
 const computeSwimMetrics = (swim: Partial<Swim>) => {
     const { distance, duration, averageStrokeRate, heartRate } = swim;
@@ -37,7 +38,6 @@ const NewRecordForm = observer(() => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { userProfile } = useAuth();
 
   const [formState, setFormState] = useState<Omit<Swim, 'id' | 'swimmer'> & { swimmerName: string; targetPace?: number; swimmerEmail: string; notes?: string }>({
     date: moment().format('YYYY-MM-DDTHH:mm'),
@@ -66,38 +66,53 @@ const NewRecordForm = observer(() => {
 
   const targetTimeReady = Boolean(formState.swimmerName && formState.distance && (isRace || formState.targetPace));
 
-  const is_admin = userProfile?.isAdmin;
+  const is_admin = swimStore.currentUser?.isAdmin;
 
   useEffect(() => {
-    setAllUsers(swimStore.users);
-  }, [swimStore.users]);
+    const load = async () => {
+      const snap = await getDocs(collection(db, 'users'));
+      setAllUsers(snap.docs.map(d => ({ ...d.data(), id: d.id } as User)));
+    };
+    load();
+  }, []);
 
   useEffect(() => {
-    if (userProfile) {
-      setFormState(prev => ({ ...prev, swimmerName: userProfile!.name, swimmerEmail: userProfile!.email }));
+    if (swimStore.currentUser) {
+      setFormState(prev => ({ ...prev, swimmerName: swimStore.currentUser!.name, swimmerEmail: swimStore.currentUser!.email }));
     }
-  }, [userProfile]);
+  }, [swimStore.currentUser]);
 
   useEffect(() => {
     if (!formState.swimmerName) return;
     const userRec = allUsers.find(u => u.name === formState.swimmerName);
     if (!userRec) return;
+    (async () => {
+      const q = query(collection(db, 'goal_times'), where('email', '==', userRec.email));
+      const snap = await getDocs(q);
+      const distances: number[] = [];
+      const map: Record<string, number> = {};
+      snap.forEach((d) => {
+        const g: Record<string, any> = d.data(); // Get raw data as a dynamically indexable type
+        const gearStr = (g.gear && g.gear.length) ? g.gear.sort().join('-') : 'NoGear';
+        const key = `${g.distance}-${g.stroke}-${gearStr}-${g.poolLength}`;
 
-    const userGoalTimes = swimStore.goalTimes.filter(gt => gt.email === userRec.email);
-
-    const distances: number[] = [];
-    const map: Record<string, number> = {};
-    userGoalTimes.forEach((g) => {
-      const gearStr = (g.gear && g.gear.length) ? g.gear.sort().join('-') : 'NoGear';
-      const key = `${g.distance}-${g.stroke}-${gearStr}-${g.poolLength}`;
-
-      map[key] = g.time;
-      distances.push(g.distance);
-    });
-    setGoalDistances([...new Set(distances)].sort((a, b) => a - b));
-    setGoalTimeMap(map);
-    console.log("Populated goalTimeMap:", map);
-  }, [formState.swimmerName, allUsers, swimStore.goalTimes]);
+        let timeValue: number | undefined;
+        for (const field in g) {
+          if (field === key) {
+            timeValue = g[field];
+            break;
+          }
+        }
+        if (timeValue !== undefined) {
+          map[key] = timeValue;
+          distances.push(g.distance);
+        }
+      });
+      setGoalDistances([...new Set(distances)].sort((a, b) => a - b));
+      setGoalTimeMap(map);
+      console.log("Populated goalTimeMap:", map);
+    })();
+  }, [formState.swimmerName, allUsers]);
 
   useEffect(() => {
     if (isRace) {

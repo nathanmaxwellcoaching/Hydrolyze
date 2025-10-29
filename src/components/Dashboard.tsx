@@ -12,7 +12,6 @@ import HorizontalProportionBar from './HorizontalProportionBar';
 import { useEffect, useRef } from 'react';
 import anime from 'animejs';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 
 // Helper function remains unchanged as it deals with logic, not presentation.
 const getAvgPercentDiff = () => {
@@ -27,7 +26,6 @@ const getAvgPercentDiff = () => {
 
 const Dashboard = observer(() => {
   const dashboardRef = useRef(null);
-  const { userProfile } = useAuth();
 
   // Staggered animation for all dashboard items on load.
   useEffect(() => {

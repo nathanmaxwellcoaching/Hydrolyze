@@ -1,5 +1,7 @@
+// Header.tsx
 import { useLocation } from "react-router-dom";
 import { observer } from "mobx-react-lite";
+import swimStore from "../store/SwimStore";
 import {
   Box,
   Typography,
@@ -13,7 +15,6 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import ViewColumnIcon from "@mui/icons-material/ViewColumn";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
 
 import FilterCard from "./FilterCard";
 import ColumnManager from "./ColumnManager";
@@ -25,26 +26,25 @@ const Header = observer(
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("lg")); // matches Layout breakpoint
-    const { userProfile } = useAuth();
 
     const handleColumnManagerClick = (event: React.MouseEvent<HTMLElement>) =>
       setAnchorEl(event.currentTarget);
     const handleColumnManagerClose = () => setAnchorEl(null);
 
     let userRole = "";
-    if (userProfile) {
-      if (userProfile.isAdmin) {
-        if (userProfile.userType === "swimmer") {
+    if (swimStore.currentUser) {
+      if (swimStore.currentUser.isAdmin) {
+        if (swimStore.currentUser.userType === "swimmer") {
           userRole = "Swimmer & Admin";
-        } else if (userProfile.userType === "coach") {
+        } else if (swimStore.currentUser.userType === "coach") {
           userRole = "Coach & Admin";
         } else {
           userRole = "Admin";
         }
       } else {
-        if (userProfile.userType === "swimmer") {
+        if (swimStore.currentUser.userType === "swimmer") {
           userRole = "Swimmer";
-        } else if (userProfile.userType === "coach") {
+        } else if (swimStore.currentUser.userType === "coach") {
           userRole = "Coach";
         }
       }
@@ -94,8 +94,8 @@ const Header = observer(
                 variant="h4"
                 sx={{ fontWeight: "bold", color: "var(--color-text-light)" }}
               >
-                {userProfile?.name
-                  ? `Welcome, ${userProfile.name}`
+                {swimStore.currentUser?.name
+                  ? `Welcome, ${swimStore.currentUser.name}`
                   : "Dashboard"}
               </Typography>
               {!isMobile && (
@@ -151,11 +151,11 @@ const Header = observer(
                     height: 48,
                   }}
                 >
-                  {userProfile?.name.charAt(0)}
+                  {swimStore.currentUser?.name.charAt(0)}
                 </Avatar>
                 <Box>
                   <Typography sx={{ fontWeight: "bold" }}>
-                    {userProfile?.name}
+                    {swimStore.currentUser?.name}
                   </Typography>
                   <Typography
                     variant="body2"

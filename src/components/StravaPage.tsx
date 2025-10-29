@@ -1,73 +1,178 @@
-import { useEffect, useState } from 'react';
-import { Box, Typography, Button, Paper, Grid, CircularProgress } from '@mui/material';
 import { observer } from 'mobx-react-lite';
-import swimStore from '../store/SwimStore';
+import React, { useState, useEffect } from 'react';
+import { Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Box, IconButton, Popover, FormGroup, MenuItem, Checkbox, ListItemText } from '@mui/material';
+import SettingsIcon from '@mui/icons-material/Settings';
 import StravaSwimChart from './StravaSwimChart';
 import HrZoneDonutChart from './HrZoneDonutChart';
-import { useAuth } from '../contexts/AuthContext';
+import { auth } from '../firebase-config';
+import axios from 'axios';
+import swimStore from '../store/SwimStore';
+import type { StravaSession } from '../store/SwimStore';
 
+const columnDisplayNames: { [key: string]: string } = {
+  start_date: 'Date',
+  name: 'Name',
+  distance: 'Distance',
+  moving_time: 'Moving Time',
+  average_heartrate: 'Avg HR',
+  max_heartrate: 'Max HR',
+};
+
+const allColumns: (keyof StravaSession)[] = ['start_date', 'name', 'distance', 'moving_time', 'average_heartrate', 'max_heartrate'];
 
 const StravaPage = observer(() => {
-  const [loading, setLoading] = useState(false);
-  const { userProfile } = useAuth();
+  const [swims, setSwims] = useState<StravaSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [visibleColumns, setVisibleColumns] = useState<(keyof StravaSession)[]>(['distance', 'start_date']);
 
-  const handleStravaAuth = () => {
-    const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${userProfile?.stravaClientId}&response_type=code&redirect_uri=${window.location.origin}/strava/callback&approval_prompt=force&scope=activity:read_all`;
-    window.location.href = stravaAuthUrl;
-  };
-
-  const fetchStravaData = async () => {
-    setLoading(true);
-    await swimStore.loadStravaSessions();
-    setLoading(false);
-  };
 
   useEffect(() => {
-    if (userProfile?.stravaClientId) {
-      fetchStravaData();
-    }
-  }, [userProfile]);
-
-  if (!userProfile) {
-    return <CircularProgress />;
-  }
-
-  const hrZoneData = swimStore.stravaSessions.reduce((acc, session) => {
-    session.hrZoneTimes?.forEach(zone => {
-      const existingZone = acc.find(z => z.name === zone.name);
-      if (existingZone) {
-        existingZone.value += zone.value;
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const response = await axios.get('/strava/swims', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setSwims(response.data);
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
       } else {
-        acc.push({ ...zone });
+        setLoading(false);
       }
     });
-    return acc;
-  }, [] as { name: string; value: number; color: string }[]);
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = () => {
+    const user = auth.currentUser;
+    if (user?.uid) {
+      window.location.href = `/auth/strava/${encodeURIComponent(user.uid)}`;
+    } else {
+      console.error('No user logged in');
+    }
+  };
+
+  const handleColumnSelectorClick = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+  const handleColumnSelectorClose = () => setAnchorEl(null);
+
+  const handleColumnToggle = (column: keyof StravaSession) => () => {
+    const currentIndex = visibleColumns.indexOf(column);
+    const newVisibleColumns = [...visibleColumns];
+
+    if (currentIndex === -1) {
+      newVisibleColumns.push(column);
+    } else {
+      newVisibleColumns.splice(currentIndex, 1);
+    }
+
+    setVisibleColumns(newVisibleColumns);
+  };
+
+  if (loading) return <div>Loading...</div>;
+
+  if (error)
+    return (
+      <div>
+        <p>Please connect your Strava account.</p>
+        <button onClick={handleLogin}>Connect with Strava</button>
+      </div>
+    );
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 2 }}>Strava Integration</Typography>
-      {!userProfile.stravaClientId ? (
-        <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Typography sx={{ mb: 2 }}>Connect your Strava account to automatically import your swim data.</Typography>
-          <Button variant="contained" onClick={handleStravaAuth}>Connect with Strava</Button>
-        </Paper>
-      ) : (
-        <Box>
-          <Button variant="contained" onClick={fetchStravaData} disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : 'Refresh Strava Data'}
-          </Button>
-          <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid item xs={12}>
-              <StravaSwimChart swims={swimStore.stravaSessions} />
-            </Grid>
-            <Grid item xs={12}>
-                <HrZoneDonutChart data={hrZoneData} />
-            </Grid>
-          </Grid>
+    <Paper sx={{
+      p: { xs: 2, sm: 3 },
+      background: 'var(--color-background-card)',
+      color: 'var(--color-text-light)',
+      borderRadius: '16px',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+    }} >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h6" fontWeight="bold" sx={{ background: 'var(--gradient-calm)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Strava Swims
+        </Typography>
+
+        <IconButton onClick={handleColumnSelectorClick} sx={{ color: 'var(--color-text-secondary)', '&:hover': { color: 'var(--color-accent-green)' } }}>
+          <SettingsIcon />
+        </IconButton>
+        <Popover
+          open={Boolean(anchorEl)}
+          anchorEl={anchorEl}
+          onClose={handleColumnSelectorClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <FormGroup sx={{ p: 2, backgroundColor: '#2C2C2C', color: '#FFFFFF' }}>
+            {allColumns.map((column) => (
+              <MenuItem key={column} onClick={handleColumnToggle(column as keyof StravaSession)}>
+                <Checkbox
+                  edge="start"
+                  checked={visibleColumns.indexOf(column as keyof StravaSession) > -1}
+                  tabIndex={-1}
+                  disableRipple
+                  sx={{ color: '#B0B0B0' }}
+                />
+                <ListItemText primary={columnDisplayNames[column] || column} />
+              </MenuItem>
+            ))}
+          </FormGroup>
+        </Popover>
+      </Box>
+      <StravaSwimChart swims={swims} />
+      {swimStore.selectedRecordForDetail && 'hrZoneTimes' in swimStore.selectedRecordForDetail && swimStore.selectedRecordForDetail.hrZoneTimes && swimStore.userMaxHr && (
+        <Box sx={{ mt: 3, mb: 3 }}>
+          <Typography variant="h6" fontWeight="bold" sx={{ background: 'var(--gradient-calm)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', mb: 2 }}>
+            HR Zone Distribution
+          </Typography>
+          <HrZoneDonutChart data={swimStore.selectedRecordForDetail.hrZoneTimes} />
         </Box>
       )}
-    </Box>
+      <TableContainer sx={{ maxHeight: 440, overflowX: 'auto' }}>
+        <Table stickyHeader aria-label="strava swim records table">
+          <TableHead>
+            <TableRow>
+              {visibleColumns.map((column) => (
+                <TableCell key={column} sx={{ backgroundColor: '#101010', color: 'var(--color-text-light)', fontWeight: 'bold', fontSize: '0.9rem', borderBottom: '2px solid var(--color-accent-blue-purple)', py: 1.5 }}>
+                  {columnDisplayNames[column] || column}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {swims.map((swim) => (
+              <TableRow
+                key={swim.id}
+                onClick={() => swimStore.openRecordDetailModal(swim)}
+                sx={{
+                  '&:last-child td, &:last-child th': { border: 0 },
+                  transition: 'background-color 0.2s ease-in-out',
+                  '&:hover': { backgroundColor: 'rgba(113, 126, 187, 0.2)', cursor: 'pointer' }
+                }}
+              >
+                {visibleColumns.map((column) => (
+                  <TableCell key={column} sx={{ color: 'var(--color-text-secondary)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', py: 1.5 }}>
+                    {column === 'start_date' ? new Date(swim[column] as string).toLocaleDateString() : swim[column] as string | number}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
   );
 });
 

@@ -1,18 +1,17 @@
+import { observer } from 'mobx-react-lite';
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import swimStore from '../store/SwimStore';
 
-const ProtectedRoute = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
+const ProtectedRoute = observer(() => {
+  if (swimStore.isLoading) {
     return <div>Loading...</div>;
   }
 
-  if (!user) {
+  if (!swimStore.isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;
-};
+});
 
 export default ProtectedRoute;

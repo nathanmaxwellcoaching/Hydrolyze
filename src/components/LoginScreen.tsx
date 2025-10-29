@@ -13,7 +13,6 @@ import {
 import PoolIcon from "@mui/icons-material/Pool";
 import anime from "animejs";
 import { fadeInWithBlur } from "../themes/animations";
-import { useAuth } from "../contexts/AuthContext";
 
 // A smoother, more vibrant gradient animation for the background.
 const gradientAnimation = keyframes`
@@ -28,13 +27,6 @@ const LoginScreen = observer(() => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const cardRef = useRef(null);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      navigate("/", { replace: true });
-    }
-  }, [user, navigate]);
 
   // Use the new, smoother animation preset.
   useEffect(() => {

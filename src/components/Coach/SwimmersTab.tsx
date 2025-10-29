@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { observer } from 'mobx-react-lite';
 import { Box, Typography, Button, Modal, TextField, List, ListItem, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import swimStore from '../../store/SwimStore';
-import { useAuth } from '../../contexts/AuthContext';
+import { collection, addDoc, getDoc, doc, updateDoc, arrayRemove, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase-config';
 
 const style = {
   position: 'absolute' as 'absolute',
@@ -17,33 +17,81 @@ const style = {
   p: 4,
 };
 
+interface Swimmer {
+  id: string;
+  name: string;
+  email: string;
+}
 
-const SwimmersTab = observer(() => {
+interface Invitation {
+  id: string;
+  swimmerEmail: string;
+}
+
+const SwimmersTab = () => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
-  const { userProfile } = useAuth();
+  const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([]);
 
   useEffect(() => {
-    swimStore.loadInvitations();
-  }, [userProfile]);
+    const fetchSwimmers = async () => {
+      if (swimStore.currentUser && swimStore.currentUser.swimmers) {
+        const swimmerPromises = swimStore.currentUser.swimmers.map(swimmerId => getDoc(doc(db, 'users', swimmerId)));
+        const swimmerDocs = await Promise.all(swimmerPromises);
+        const fetchedSwimmers = swimmerDocs.map(doc => ({ ...doc.data(), id: doc.id } as Swimmer));
+        setSwimmers(fetchedSwimmers);
+      }
+    };
+
+    const fetchPendingInvitations = async () => {
+      if (swimStore.currentUser) {
+        const invitationsCollection = collection(db, 'invitations');
+        const q = query(
+          invitationsCollection,
+          where('coachId', '==', swimStore.currentUser.id),
+          where('status', '==', 'pending')
+        );
+        const querySnapshot = await getDocs(q);
+        const fetchedInvitations = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Invitation));
+        setPendingInvitations(fetchedInvitations);
+      }
+    };
+
+    fetchSwimmers();
+    fetchPendingInvitations();
+  }, [swimStore.currentUser]);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const handleInvite = async () => {
-    await swimStore.inviteSwimmer(email);
-    handleClose();
+    if (swimStore.currentUser && swimStore.currentUser.userType === 'coach') {
+      const invitationsCollection = collection(db, 'invitations');
+      await addDoc(invitationsCollection, {
+        coachId: swimStore.currentUser.id,
+        swimmerEmail: email,
+        status: 'pending',
+      });
+      handleClose();
+    }
   };
 
   const handleRemoveSwimmer = async (swimmerId: string) => {
-    await swimStore.removeSwimmer(swimmerId);
+    if (swimStore.currentUser) {
+      const coachRef = doc(db, 'users', swimStore.currentUser.id);
+      await updateDoc(coachRef, {
+        swimmers: arrayRemove(swimmerId),
+      });
+
+      const swimmerRef = doc(db, 'users', swimmerId);
+      await updateDoc(swimmerRef, {
+        coaches: arrayRemove(swimStore.currentUser.id),
+      });
+
+      setSwimmers(swimmers.filter(swimmer => swimmer.id !== swimmerId));
+    }
   };
-
-  const swimmers = userProfile?.swimmers
-    ? swimStore.users.filter(u => userProfile?.swimmers?.includes(u.UID))
-    : [];
-
-  const pendingInvitations = swimStore.invitations.filter(i => i.coachId === userProfile?.UID);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -55,9 +103,9 @@ const SwimmersTab = observer(() => {
       </Box>
       <List>
         {swimmers.map(swimmer => (
-          <ListItem key={swimmer.UID}>
+          <ListItem key={swimmer.id}>
             <ListItemText primary={swimmer.name} secondary={swimmer.email} />
-            <Button onClick={() => handleRemoveSwimmer(swimmer.UID)}>Remove</Button>
+            <Button onClick={() => handleRemoveSwimmer(swimmer.id)}>Remove</Button>
           </ListItem>
         ))}
       </List>
@@ -92,6 +140,6 @@ const SwimmersTab = observer(() => {
       </Modal>
     </Box>
   );
-});
+};
 
 export default SwimmersTab;
