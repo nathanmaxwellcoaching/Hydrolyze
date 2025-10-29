@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { Box, Typography, Button, Modal, TextField, List, ListItem, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import swimStore from '../../store/SwimStore';
+import { useAuth } from '../../contexts/AuthContext';
 
 const style = {
   position: 'absolute' as 'absolute',
@@ -20,10 +21,11 @@ const style = {
 const SwimmersTab = observer(() => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
+  const { userProfile } = useAuth();
 
   useEffect(() => {
     swimStore.loadInvitations();
-  }, []);
+  }, [userProfile]);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -37,11 +39,11 @@ const SwimmersTab = observer(() => {
     await swimStore.removeSwimmer(swimmerId);
   };
 
-  const swimmers = swimStore.currentUser?.swimmers
-    ? swimStore.users.filter(u => swimStore.currentUser?.swimmers?.includes(u.id))
+  const swimmers = userProfile?.swimmers
+    ? swimStore.users.filter(u => userProfile?.swimmers?.includes(u.UID))
     : [];
 
-  const pendingInvitations = swimStore.invitations.filter(i => i.coachId === swimStore.currentUser?.id);
+  const pendingInvitations = swimStore.invitations.filter(i => i.coachId === userProfile?.UID);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -53,9 +55,9 @@ const SwimmersTab = observer(() => {
       </Box>
       <List>
         {swimmers.map(swimmer => (
-          <ListItem key={swimmer.id}>
+          <ListItem key={swimmer.UID}>
             <ListItemText primary={swimmer.name} secondary={swimmer.email} />
-            <Button onClick={() => handleRemoveSwimmer(swimmer.id)}>Remove</Button>
+            <Button onClick={() => handleRemoveSwimmer(swimmer.UID)}>Remove</Button>
           </ListItem>
         ))}
       </List>

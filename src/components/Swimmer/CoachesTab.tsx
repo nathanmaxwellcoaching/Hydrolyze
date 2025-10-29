@@ -3,11 +3,14 @@ import { observer } from 'mobx-react-lite';
 import { Box, Typography, Button, List, ListItem, ListItemText } from '@mui/material';
 import swimStore from '../../store/SwimStore';
 import type { Invitation } from '../../store/SwimStore';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CoachesTab = observer(() => {
+  const { userProfile } = useAuth();
+
   useEffect(() => {
     swimStore.loadInvitations();
-  }, []);
+  }, [userProfile]);
 
   const handleAccept = async (invitation: Invitation) => {
     await swimStore.acceptInvitation(invitation);
@@ -21,8 +24,8 @@ const CoachesTab = observer(() => {
     await swimStore.removeCoach(coachId);
   };
 
-  const coaches = swimStore.currentUser?.coaches
-    ? swimStore.users.filter(u => swimStore.currentUser?.coaches?.includes(u.id))
+  const coaches = userProfile?.coaches
+    ? swimStore.users.filter(u => userProfile?.coaches?.includes(u.UID))
     : [];
 
   return (
@@ -30,7 +33,7 @@ const CoachesTab = observer(() => {
       <Typography variant="h4" sx={{ mb: 2 }}>My Coaches</Typography>
       <List>
         {coaches.map(coach => (
-          <ListItem key={coach.id}>
+          <ListItem key={coach.UID}>
             <ListItemText primary={coach.name} secondary={coach.email} />
             <Button 
               variant="contained" 
@@ -39,7 +42,7 @@ const CoachesTab = observer(() => {
                 color: 'white', 
                 '&:hover': { backgroundColor: '#c0392b' } 
               }}
-              onClick={() => handleRemoveCoach(coach.id)}
+              onClick={() => handleRemoveCoach(coach.UID)}
             >
               Remove
             </Button>

@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
+import swimStore from './store/SwimStore';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import NewRecordForm from './components/NewRecordForm';
@@ -16,10 +18,35 @@ import CalendarView from './components/CalendarView';
 import SwimmersTab from './components/Coach/SwimmersTab';
 import CoachesTab from './components/Swimmer/CoachesTab';
 import AchievementRatePage from './components/AchievementRatePage';
-
 import StandardDeviationPage from './components/StandardDeviationPage';
+import { useAuth } from './contexts/AuthContext';
+import { CircularProgress, Box } from '@mui/material';
 
 const App = observer(() => {
+  const { userProfile, loading, refreshUserProfile } = useAuth();
+
+  useEffect(() => {
+    swimStore.setCurrentUser(userProfile);
+    if (userProfile) {
+      swimStore.loadSwims();
+      swimStore.loadUsers();
+    }
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (refreshUserProfile) {
+      swimStore.setRefreshUserProfile(refreshUserProfile);
+    }
+  }, [refreshUserProfile]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginScreen />} />

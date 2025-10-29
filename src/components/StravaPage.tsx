@@ -4,13 +4,15 @@ import { observer } from 'mobx-react-lite';
 import swimStore from '../store/SwimStore';
 import StravaSwimChart from './StravaSwimChart';
 import HrZoneDonutChart from './HrZoneDonutChart';
+import { useAuth } from '../contexts/AuthContext';
 
 
 const StravaPage = observer(() => {
   const [loading, setLoading] = useState(false);
+  const { userProfile } = useAuth();
 
   const handleStravaAuth = () => {
-    const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${swimStore.currentUser?.stravaClientId}&response_type=code&redirect_uri=${window.location.origin}/strava/callback&approval_prompt=force&scope=activity:read_all`;
+    const stravaAuthUrl = `https://www.strava.com/oauth/authorize?client_id=${userProfile?.stravaClientId}&response_type=code&redirect_uri=${window.location.origin}/strava/callback&approval_prompt=force&scope=activity:read_all`;
     window.location.href = stravaAuthUrl;
   };
 
@@ -21,12 +23,12 @@ const StravaPage = observer(() => {
   };
 
   useEffect(() => {
-    if (swimStore.currentUser?.stravaClientId) {
+    if (userProfile?.stravaClientId) {
       fetchStravaData();
     }
-  }, [swimStore.currentUser]);
+  }, [userProfile]);
 
-  if (!swimStore.currentUser) {
+  if (!userProfile) {
     return <CircularProgress />;
   }
 
@@ -45,7 +47,7 @@ const StravaPage = observer(() => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 2 }}>Strava Integration</Typography>
-      {!swimStore.currentUser.stravaClientId ? (
+      {!userProfile.stravaClientId ? (
         <Paper sx={{ p: 2, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <Typography sx={{ mb: 2 }}>Connect your Strava account to automatically import your swim data.</Typography>
           <Button variant="contained" onClick={handleStravaAuth}>Connect with Strava</Button>

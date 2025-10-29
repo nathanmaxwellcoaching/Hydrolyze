@@ -8,6 +8,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Tooltip, Checkbox, FormControlLabel
 } from '@mui/material';
 import moment from 'moment';
+import { useAuth } from '../contexts/AuthContext';
 
 const computeSwimMetrics = (swim: Partial<Swim>) => {
     const { distance, duration, averageStrokeRate, heartRate } = swim;
@@ -36,6 +37,7 @@ const NewRecordForm = observer(() => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { userProfile } = useAuth();
 
   const [formState, setFormState] = useState<Omit<Swim, 'id' | 'swimmer'> & { swimmerName: string; targetPace?: number; swimmerEmail: string; notes?: string }>({
     date: moment().format('YYYY-MM-DDTHH:mm'),
@@ -64,17 +66,17 @@ const NewRecordForm = observer(() => {
 
   const targetTimeReady = Boolean(formState.swimmerName && formState.distance && (isRace || formState.targetPace));
 
-  const is_admin = swimStore.currentUser?.isAdmin;
+  const is_admin = userProfile?.isAdmin;
 
   useEffect(() => {
     setAllUsers(swimStore.users);
   }, [swimStore.users]);
 
   useEffect(() => {
-    if (swimStore.currentUser) {
-      setFormState(prev => ({ ...prev, swimmerName: swimStore.currentUser!.name, swimmerEmail: swimStore.currentUser!.email }));
+    if (userProfile) {
+      setFormState(prev => ({ ...prev, swimmerName: userProfile!.name, swimmerEmail: userProfile!.email }));
     }
-  }, [swimStore.currentUser]);
+  }, [userProfile]);
 
   useEffect(() => {
     if (!formState.swimmerName) return;
