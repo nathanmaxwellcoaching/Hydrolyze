@@ -1,0 +1,53 @@
+{
+  "name": "swim-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port $PORT",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@eslint/compat": "^1.4.1",
+    "@mui/icons-material": "^5.15.18",
+    "@mui/material": "^5.15.18",
+    "@mui/x-charts": "^7.6.0",
+    "@mui/x-data-grid": "^8.12.1",
+    "@supabase/supabase-js": "^2.43.4",
+    "@types/react-calendar": "^3.9.0",
+    "animejs": "^3.2.2",
+    "apexcharts": "^5.3.5",
+    "axios": "^1.12.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "moment": "^2.30.1",
+    "react": "^18.2.0",
+    "react-apexcharts": "^1.7.0",
+    "react-calendar": "^6.0.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.30.1",
+    "simple-statistics": "^7.8.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "@types/animejs": "^3.1.12",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.3.0",
+    "mobx": "^6.15.0",
+    "mobx-react-lite": "^4.1.0",
+    "typescript": "~5.4.5",
+    "typescript-eslint": "^8.46.2",
+    "vite": "^5.2.11",
+    "vite-plugin-pwa": "^1.1.0"
+  }
+}
